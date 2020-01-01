@@ -1,0 +1,4 @@
+redis:
+    host: tools-mc
+    db: 7
+    redis_prefix: "WN5jQ4kvYCONVfY07+Bawg4bLxUeFkhK2JrA7fHFa5M="
