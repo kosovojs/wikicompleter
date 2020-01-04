@@ -105,14 +105,53 @@ class WikiDB:
 			'params': finalParams
 		}
 
+	def getLanglinksForPageIds(self, pages):
+		tpl = """select ll_from, count(l.ll_lang) as langs
+			from langlinks l
+			where not exists (select * from langlinks m where m.ll_from=l.ll_from and m.ll_lang=%s)
+				and ll_from in ({})
+  			group by l.ll_from"""
+
+		finalQuery = tpl.format(self.whereIn(pages))
+		finalParams = [self.langTo]
+		finalParams.extend(pages)
+		
+		result = self.runQuery(finalQuery, tuple(finalParams))
+
+		return {f['ll_from']:f['langs'] for f in result}
+
+	def handlePetscan(self, id):
+		import requests, json
+		response = requests.get('http://petscan.wmflabs.org/?psid={}&format=json'.format(id))
+
+		if not response.status_code == 200:
+			return {}
+		
+		data = response.json()['*'][0]['a']['*']
+
+		pageIds = [f['id'] for f in data]
+
+		chunks = self.chunker(pageIds, self.oneChunkSize)
+		
+		idMappingToTitles = {}
+		
+		for chunk in chunks:
+			currRes = self.getLanglinksForPageIds(chunk)
+			idMappingToTitles.update(currRes)
+		
+		return idMappingToTitles
+		
+
 	def mainLanglinksQuery(self, params):
 		tpl = """select ll_from, langs from ({}) tablea order by langs desc limit 500"""
 
 		allInfo = []
 		allInfo.extend([self.makeOneLanglinksSubquery(categoryInfo['query'], categoryInfo['params']) for categoryInfo in params['category']])
 		allInfo.extend([self.makeOneLanglinksSubquery(templateInfo['query'], templateInfo['params']) for templateInfo in params['template']])
+		#allInfo.extend([self.makeOneLanglinksSubquery(templateInfo['query'], templateInfo['params']) for templateInfo in params['petscan']])
 		
 		allSubqueriesData = allInfo
+		
 		allSubqueries = [f['query'] for f in allSubqueriesData]
 		allParams = [f['params'] for f in allSubqueriesData]
 		
@@ -123,9 +162,18 @@ class WikiDB:
 		#print('params',finalParams)
 		#exit()
 		
-		result = self.runQuery(finalQuery, tuple(finalParams))
+		res = {}
+
+		if len(allSubqueriesData)>0:
+			result = self.runQuery(finalQuery, tuple(finalParams))
+			res = {f['ll_from']:f['langs'] for f in result}
 		
-		return {f['ll_from']:f['langs'] for f in result}
+		if 'petscan' in params:
+			for petscanInfo in params['petscan']:
+				petscanResult = self.handlePetscan(petscanInfo['id'])
+				res.update(petscanResult)
+		
+		return res
 
 	''' def mainLanglinksQuery(self, categoryInfo, templateInfo):
 		tpl = """select ll_from, count(l.ll_lang) as langs
@@ -175,7 +223,7 @@ class WikiDB:
 		return idMappingToTitles
 		
 	def main(self, inputData):# = { 'title': '1957 births', 'depth': 5, 'tplTitle': 'Infobox park' }
-		return [['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48]]
+		#return [['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48]]
 
 		subQueryParams = {'category':[], 'template':[]}
 		for reqParam in inputData:
@@ -185,6 +233,8 @@ class WikiDB:
 				subQueryParams['category'].append(self.handleCategory(reqSpecifics['title'], reqSpecifics['depth']))
 			elif reqType == 'template':
 				subQueryParams['template'].append(self.handleTemplate(reqSpecifics['title']))
+			elif reqType == 'petscan':
+				subQueryParams['template'].append(self.handlePetscan(reqSpecifics['id']))
 		
 		#categoryInfo = self.handleCategory(inputData['title'], inputData['depth'])
 		#templateInfo = self.handleTemplate(inputData['tplTitle'])
@@ -211,7 +261,7 @@ class WikiDB:
 		return finalResult
 		#return self.fromCategory
 #
-inst = WikiDB('en','lv')
+#inst = WikiDB('en','lv')
 """ inst.main([
 			{ 'type': 'category', 'specific': { 'title': '1957 births', 'depth': 0, 'talk': False } },
 			{ 'type': 'template', 'specific': { 'title': 'Infobox park', 'talk': False } },

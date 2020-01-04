@@ -13,8 +13,18 @@ import MenuItem from '@material-ui/core/MenuItem';
 import FormControl from '@material-ui/core/FormControl';
 import Select from '@material-ui/core/Select';
 import Divider from '@material-ui/core/Divider';
+import Button from '@material-ui/core/Button';
+
+import { toast } from 'react-toastify';
 
 import PropTypes from 'prop-types';
+import apiWrapper from '../../api/methods';
+
+
+import { connect } from 'react-redux';
+import { setRequestData } from '../ToolPage/slice';
+import { getData } from '../ResultsList/slice';
+
 
 const styles = theme => ({
 	root: {
@@ -31,23 +41,30 @@ const styles = theme => ({
 		marginTop: theme.spacing(2)
 	},
 	margin: {
-	  margin: theme.spacing(1),
-	},
+		margin: theme.spacing(1)
+	}
 });
+
+const filterProperties = {
+	category: { title: '', depth: 0, talk: false },
+	template: {title: '', talk: false},
+	petscan: { id: '' }
+}
 
 class QueryFilter extends Component {
 	state = {
-		inputLanguage: 'en',
+		inputLanguage: '',
 		project: 'wikipedia',
-		targetLanguage: 'lv',
+		targetLanguage: '',
+		titleLanguage: '',
 		output: 'list',
 		outputOptions: ['list', 'json', 'table'],
 		onlyArticles: true,
 		filters: [
-			{ type: 'category', specific: { title: '', depth: 0, talk: false } },
-			{ type: 'template', specific: { title: '', talk: false } },
-			{ type: 'petscan', specific: { id: '' } },
-			{ type: 'pagelinks', specific: { title: '', mode:'linksto' } },//'linksfrom'
+			{ type: 'category', specific: { title: 'gfdgf', depth: 0, talk: false } },
+			//{ type: 'template', specific: { title: '', talk: false } },
+			//{ type: 'petscan', specific: { id: '' } }
+			//{ type: 'pagelinks', specific: { title: '', mode:'linksto' } },//'linksfrom'
 			//{ type: null },
 		]
 	};
@@ -60,23 +77,22 @@ class QueryFilter extends Component {
 
 	handleFilterChange = filterIndex => event => {
 		const { name, value, checked, type } = event.target;
-		console.log({ name, value, checked, type }, filterIndex);
 		const inputValue = type === 'checkbox' ? checked : value;
 
 		const newFilter = [...this.state.filters];
 
 		if (name === 'type') {
 			newFilter[filterIndex] = {
-				...newFilter[filterIndex],
+				specific: filterProperties[inputValue],
 				[name]: inputValue
 			};
-			this.setState({ filters:newFilter });
+			this.setState({ filters: newFilter });
 			return;
 		}
 
-		if (inputValue.length>0 && name === 'depth') {
+		if (inputValue.length > 0 && name === 'depth') {
 			const numericalValue = parseInt(inputValue);
-			if (numericalValue >10 || numericalValue < 0) {
+			if (numericalValue > 10 || numericalValue < 0) {
 				return;
 			}
 		}
@@ -89,19 +105,91 @@ class QueryFilter extends Component {
 				...currentFilter.specific,
 				[name]: inputValue
 			}
-		}
+		};
 		newFilter[filterIndex] = currentFilter;
 
-		this.setState({ filters:newFilter });
+		this.setState({ filters: newFilter });
 	};
 
-	removeFilter = (ind) => {
-		this.setState({ filters:this.state.filters.filter((item, counter)  => counter !== ind)});
+	removeFilter = ind => {
+		this.setState({ filters: this.state.filters.filter((item, counter) => counter !== ind) });
+	};
+
+	addFilter = ind => {
+		//teorētiski jau varētu ielikt kā nākamo pēc 'ind'
+		this.setState({ filters: [
+			...this.state.filters,
+			{ type: 'category', specific: filterProperties.category }
+		] });
+	}
+
+	submit = e => {
+		/*
+		{ 'from':'en','to':'lv', 'ignoreCache': False, 'filters': [
+	{ 'type': 'category', 'specific': { 'title': '1957 births', 'depth': 5, 'talk': False } },
+	{ 'type': 'template', 'specific': { 'title': 'Infobox park', 'talk': False } },
+	{ 'type': 'petscan', 'specific': { 'id': '' } }
+] }
+*/
+		const {inputLanguage, targetLanguage, titleLanguage, filters} = this.state;
+
+		if (inputLanguage == '') {
+			toast.warn(`Please add input language`, { autoClose: 7500 });
+			return;
+		}
+
+		if (targetLanguage == '') {
+			toast.warn(`Please add target language`, { autoClose: 7500 });
+			return;
+		}
+
+		if (inputLanguage === targetLanguage) {
+			toast.warn(`Input and target languages are the same!`, { autoClose: 7500 });
+			return;
+		}
+
+		if (filters.length === 0) {
+			toast.warn(`Add at least one filter`, { autoClose: 7500 });
+			return;
+		}
+
+		let wasFilterError = false;
+		filters.forEach((item, ind) => {
+			if (wasFilterError) {
+				return;
+			}
+			const {type, specific} = item;
+			if (type === 'category') {
+				if (specific.title === '') {
+					toast.warn(`Please fill filter nr. ${(ind+1)}`, { autoClose: 7500 });
+					wasFilterError = true;
+					return;
+				}
+			} else if (type === 'template') {
+				if (specific.title === '') {
+					toast.warn(`Please fill filter nr. ${(ind+1)}`, { autoClose: 7500 });
+					wasFilterError = true;
+					return;
+				}
+			} else if (type === 'petscan') {
+				if (specific.id === '') {
+					toast.warn(`Please fill filter nr. ${(ind+1)}`, { autoClose: 7500 });
+					wasFilterError = true;
+					return;
+				}
+			}
+		})
+		if (wasFilterError) {
+			return;
+		}
+
+		this.props.setRequestData(inputLanguage, targetLanguage, filters);
+		this.props.getData();
 	}
 
 	render() {
 		const { inputLanguage, targetLanguage, onlyArticles, filters } = this.state;
-		const { classes } = this.props;
+		const { classes, dataLoading } = this.props;
 
 		return (
 			<div className={classes.root}>
@@ -109,23 +197,30 @@ class QueryFilter extends Component {
 					label='Input language'
 					name='inputLanguage'
 					onChange={this.handleChange}
-					helperText='Some important text'
 					value={inputLanguage}
 					size='small'
 					variant='outlined'
 					margin='dense'
 				/>
 				<TextField
-					label='Target language'
+					label='Without interwiki to'
 					name='targetLanguage'
 					onChange={this.handleChange}
-					helperText='Without interwiki to'
 					value={targetLanguage}
 					size='small'
 					variant='outlined'
 					margin='dense'
 				/>
-				<FormControlLabel
+				{/* <TextField
+					label='Use titles from this language'
+					name='titleLanguage'
+					onChange={this.handleChange}
+					value={titleLanguage}
+					size='small'
+					variant='outlined'
+					margin='dense'
+				/> */}
+				{/* <FormControlLabel
 					control={
 						<Switch
 							checked={onlyArticles}
@@ -134,19 +229,24 @@ class QueryFilter extends Component {
 						/>
 					}
 					label='Include only articles'
-				/>
+				/> */}
 				<br />
 				{filters.map((item, ind) => {
-					const {type, specific} = item;
+					const { type, specific } = item;
 					return (
 						<div key={ind}>
 							<Divider />
-							<IconButton aria-label="delete" className={classes.margin}>
-          <AddIcon fontSize="small" />
-        </IconButton>
-		<IconButton aria-label="delete" className={classes.margin} onClick={() => this.removeFilter(ind)}>
-          <DeleteIcon fontSize="small" />
-        </IconButton>
+							<IconButton aria-label='delete' className={classes.margin} onClick={() => this.addFilter(ind)}>
+								<AddIcon fontSize='small' />
+							</IconButton>
+							{filters.length > 1 && (
+								<IconButton
+									aria-label='delete'
+									className={classes.margin}
+									onClick={() => this.removeFilter(ind)}>
+									<DeleteIcon fontSize='small' />
+								</IconButton>
+							)}
 							<FormControl variant='outlined' className={classes.formControl}>
 								<InputLabel htmlFor='outlined-age-simple'>Filter type</InputLabel>
 								<Select
@@ -156,110 +256,121 @@ class QueryFilter extends Component {
 									onChange={this.handleFilterChange(ind)}
 									input={<OutlinedInput name='age' id='outlined-age-simple' />}>
 									<MenuItem value={'category'}>Category</MenuItem>
-									<MenuItem value={'template'}>Template</MenuItem>
-									<MenuItem value={'pagelinks'}>Pagelinks</MenuItem>
 									<MenuItem value={'petscan'}>Petscan</MenuItem>
+									<MenuItem value={'template'}>Template</MenuItem>
+									{/* <MenuItem value={'pagelinks'}>Pagelinks</MenuItem> */}
 								</Select>
 							</FormControl>
-							{
-								type === 'category' && <>
-								<TextField
-									label='Category title'
-									name='title'
-									onChange={this.handleFilterChange(ind)}
-									value={specific.title}
-									size='small'
-									variant='outlined'
-									margin='dense'
-								/>
-								<TextField
-									label='Recurse category'
-									name='depth'
-									type="number"
-									inputProps={{ min: "0", max: "10", step: "1" }}
-									onChange={this.handleFilterChange(ind)}
-									value={specific.depth}
-									size='small'
-									variant='outlined'
-									margin='dense'
-								/>
-								<FormControlLabel
-									control={
-										<Switch
-											checked={specific.talk}
-											onChange={this.handleFilterChange(ind)}
-											name='talk'
-										/>
-									}
-									label='Use talk pages instead'
-								/>
-								</>
-							}
-							{
-								type === 'template' && <>
-								<TextField
-									label='Template title'
-									name='title'
-									onChange={this.handleFilterChange(ind)}
-									value={specific.title}
-									size='small'
-									variant='outlined'
-									margin='dense'
-								/>
-								<FormControlLabel
-									control={
-										<Switch
-											checked={specific.talk}
-											onChange={this.handleFilterChange(ind)}
-											name='talk'
-										/>
-									}
-									label='Use talk pages instead'
-								/>
-								</>
-							}
-							{
-								type === 'pagelinks' && <>
-								<TextField
-									label='Article title'
-									name='title'
-									onChange={this.handleFilterChange(ind)}
-									value={specific.title}
-									size='small'
-									variant='outlined'
-									margin='dense'
-								/>
-								<FormControl variant='outlined' className={classes.formControl}>
-									<InputLabel htmlFor='outlined-age-simple'>Mode</InputLabel>
-									<Select
-										margin='dense'
-										value={specific.mode}
-										name='mode'
+							{type === 'category' && (
+								<>
+									<TextField
+										label='Category title'
+										name='title'
 										onChange={this.handleFilterChange(ind)}
-										input={<OutlinedInput name='age' id='outlined-age-simple' />}>
-										<MenuItem value={'linksto'}>WhatLinksHere</MenuItem>
-										<MenuItem value={'linksfrom'}>Links on page</MenuItem>
-									</Select>
-								</FormControl>
+										value={specific.title}
+										//size='small'
+										variant='outlined'
+										margin='dense'
+										style={{ margin: 8, width: '300px' }}
+										fullWidth
+									/>
+									<TextField
+										label='Depth'
+										name='depth'
+										type='number'
+										inputProps={{ min: '0', max: '10', step: '1' }}
+										onChange={this.handleFilterChange(ind)}
+										value={specific.depth}
+										size='small'
+										variant='outlined'
+										margin='dense'
+									/>
+									{/* <FormControlLabel
+									control={
+										<Switch
+											checked={specific.talk}
+											onChange={this.handleFilterChange(ind)}
+											name='talk'
+										/>
+									}
+									label='Use talk pages instead'
+								/> */}
 								</>
-							}
-							{
-								type === 'petscan' && <>
-								<TextField
-									label='Petscan ID'
-									name='id'
-									onChange={this.handleFilterChange(ind)}
-									value={specific.id}
-									size='small'
-									variant='outlined'
-									margin='dense'
-								/>
+							)}
+							{type === 'template' && (
+								<>
+									<TextField
+										label='Template title'
+										name='title'
+										onChange={this.handleFilterChange(ind)}
+										value={specific.title}
+										size='small'
+										variant='outlined'
+										margin='dense'
+										style={{ margin: 8, width: '300px' }}
+										fullWidth
+									/>
+									{/* <FormControlLabel
+									control={
+										<Switch
+											checked={specific.talk}
+											onChange={this.handleFilterChange(ind)}
+											name='talk'
+										/>
+									}
+									label='Use talk pages instead'
+								/> */}
 								</>
-							}
-
+							)}
+							{type === 'pagelinks' && (
+								<>
+									<TextField
+										label='Article title'
+										name='title'
+										onChange={this.handleFilterChange(ind)}
+										value={specific.title}
+										size='small'
+										variant='outlined'
+										margin='dense'
+									/>
+									<FormControl variant='outlined' className={classes.formControl}>
+										<InputLabel htmlFor='outlined-age-simple'>Mode</InputLabel>
+										<Select
+											margin='dense'
+											value={specific.mode}
+											name='mode'
+											onChange={this.handleFilterChange(ind)}
+											input={
+												<OutlinedInput
+													name='age'
+													id='outlined-age-simple'
+												/>
+											}>
+											<MenuItem value={'linksto'}>WhatLinksHere</MenuItem>
+											<MenuItem value={'linksfrom'}>Links on page</MenuItem>
+										</Select>
+									</FormControl>
+								</>
+							)}
+							{type === 'petscan' && (
+								<>
+									<TextField
+										label='Petscan ID'
+										name='id'
+										onChange={this.handleFilterChange(ind)}
+										value={specific.id}
+										size='small'
+										variant='outlined'
+										margin='dense'
+										style={{ margin: 8, width: '300px' }}
+										fullWidth
+									/>
+								</>
+							)}
 						</div>
 					);
 				})}
+				<Button disabled={dataLoading} variant="contained" color="primary" disableelevation="true" onClick={this.submit}>Submit</Button>
 			</div>
 		);
 	}
@@ -269,4 +380,9 @@ QueryFilter.propTypes = {
 	classes: PropTypes.object
 };
 
-export default withStyles(styles, { withTheme: true })(QueryFilter);
+const mapDispatchToProps = { setRequestData, getData };
+const mapStateToProps = state => ({
+	dataLoading: state.data.loading
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(withStyles(styles, { withTheme: true })(QueryFilter));

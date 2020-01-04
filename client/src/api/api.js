@@ -32,6 +32,12 @@ const fetchResource = (path, userOptions = {}) => {
 		!isFile &&
 		bodyMethods.indexOf(options.method) > -1
 	) {
+
+		options.headers = {
+			'Accept': 'application/json',
+			'Content-Type': 'application/json'
+		};
+
 		options.body = JSON.stringify(options.body);
 	}
 

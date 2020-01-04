@@ -1,10 +1,19 @@
 import React, { Component } from 'react';
 import { withStyles } from '@material-ui/core/styles';
 
-import Popover from '@material-ui/core/Popover';
 import Typography from '@material-ui/core/Typography';
+import CircularProgress from '@material-ui/core/CircularProgress';
 
 import PropTypes from 'prop-types';
+import { connect } from 'react-redux';
+
+import { getData } from './slice';
+
+import AsList from './as_list';
+
+import {
+	Link
+  } from "react-router-dom";
 
 const styles = theme => ({
 	root: {
@@ -13,23 +22,26 @@ const styles = theme => ({
 			width: 200
 		}
 	},
-
-	popover: {
-		pointerEvents: 'none'
+	loadingPage: {
+		display: 'flex',
+		margin: '0 auto'
 	},
-
-	paper: {
-		padding: theme.spacing(1)
+	loadingPageWrapper: {
+		position: 'fixed',
+		width: '100%',
+		height: '100%',
+		display: 'flex',
+		alignItems: 'center',
+		top: '0'
 	},
-	formControl: {
-		margin: theme.spacing(1),
-		minWidth: 120
+	infoText: {
+		fontSize: '0.8rem'
 	},
-	selectEmpty: {
-		marginTop: theme.spacing(2)
+	loadWithoutCache: {
+		cursor:'pointer'
 	},
-	margin: {
-		margin: theme.spacing(1)
+	floatRight: {
+		float: 'right'
 	}
 });
 
@@ -39,79 +51,48 @@ class ResultsList extends Component {
 		anchorEl: null
 	};
 
-	handlePopoverOpen = event => {
-		this.setState({ anchorEl: event.currentTarget });
-	};
-
-	handlePopoverClose = () => {
-		this.setState({ anchorEl: null });
-	};
+	reloadWithoutCache = () => {
+		this.props.getData(true);
+	}
 
 	render() {
 		const { anchorEl } = this.state;
-		const { classes } = this.props;
+		const { classes, loading, articles, time, isCached, cacheAge, language, reqID } = this.props;
 
 		const open = Boolean(anchorEl);
 
+		if (loading) {
+			return (
+				<div className={classes.loadingPageWrapper}>
+					<CircularProgress className={classes.loadingPage} />
+				</div>
+			);
+		}
+
 		return (
 			<div className={classes.root}>
-				{JSON.stringify(open)}
-				<Typography
-					aria-owns={open ? 'mouse-over-popover' : undefined}
-					aria-haspopup='true'
-					onMouseEnter={this.handlePopoverOpen}
-					onMouseLeave={this.handlePopoverClose}>
-					Hover with a Popover.
-				</Typography>
-				<Typography
-					aria-owns={open ? 'mouse-over-popover' : undefined}
-					aria-haspopup='true'
-					onMouseEnter={this.handlePopoverOpen}
-					onMouseLeave={this.handlePopoverClose}>
-					Hover with a Popover.
-				</Typography>
-				<Typography
-					aria-owns={open ? 'mouse-over-popover' : undefined}
-					aria-haspopup='true'
-					onMouseEnter={this.handlePopoverOpen}
-					onMouseLeave={this.handlePopoverClose}>
-					Hover with a Popover.
-				</Typography>
-				<Typography
-					aria-owns={open ? 'mouse-over-popover' : undefined}
-					aria-haspopup='true'
-					onMouseEnter={this.handlePopoverOpen}
-					onMouseLeave={this.handlePopoverClose}>
-					Hover with a Popover.
-				</Typography>
-				<Typography
-					aria-owns={open ? 'mouse-over-popover' : undefined}
-					aria-haspopup='true'
-					onMouseEnter={this.handlePopoverOpen}
-					onMouseLeave={this.handlePopoverClose}>
-					Hover with a Popover.
-				</Typography>
+				<Typography component={'div'} variant='body1'>
+					{articles.length > 0 && (
+						<>
+							{isCached && (
+								<>
+								<span className={classes.infoText}>
+									Showing {cacheAge} seconds old cached version of list. <span className={classes.loadWithoutCache} onClick={this.reloadWithoutCache}>Load live data!</span>
+								</span>
+								</>
+							)}
+							<span className={classes.floatRight}>
+								Request {reqID}: <Link to="/request">with autoload</Link>, <Link to="/users">without autoload</Link>
+							</span>
 
-				<Popover
-					id='mouse-over-popover'
-					open={open}
-					anchorEl={anchorEl}
-					onClose={this.handlePopoverClose}
-					disableRestoreFocus
-					anchorOrigin={{
-						vertical: 'bottom',
-						horizontal: 'center'
-					}}
-					transformOrigin={{
-						vertical: 'center',
-						horizontal: 'center'
-					}}
-					className={classes.popover}
-					classes={{
-						paper: classes.paper
-					}}>
-					The content of the Popover.
-				</Popover>
+							<AsList list={articles} language={language} />
+
+							<span className={classes.infoText}>
+								Query took {time} seconds to complete
+							</span>
+						</>
+					)}
+				</Typography>
 			</div>
 		);
 	}
@@ -121,4 +102,16 @@ ResultsList.propTypes = {
 	classes: PropTypes.object
 };
 
-export default withStyles(styles, { withTheme: true })(ResultsList);
+const mapDispatchToProps = { getData };
+
+const mapStateToProps = ({ data, main }) => ({
+	loading: data.loading,
+	articles: data.list,
+	time: data.completionTime,
+	isCached: data.isCached,
+	cacheAge: data.cacheAge,
+	reqID: data.reqID,
+	language: main.from
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(withStyles(styles, { withTheme: true })(ResultsList));

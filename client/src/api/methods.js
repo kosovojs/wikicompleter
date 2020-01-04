@@ -49,59 +49,8 @@ const mediawiki = {
 }
 
 const tool = {
-	nextArticle: (currentID,type) => get('',{
-		action: 'npp_get_new',
-		last_id: currentID,
-		type1: type
-	}),
+	submit: (data) => post('data',{info:data}),
 
-	articleList: () => get('',{
-		action: 'main_list_npp'
-	}),
-
-	articlesWithComments: () => get('',{
-		action: 'main_comments_npp'
-	}),
-
-	graphdata: (period) => get('',{
-		action: 'graphdata',
-		period
-	}),
-
-	setForDeletion: ({title, reason, days}) => post('',{
-		action: 'set_for_deletion',
-		title,
-		reason,
-		days
-	}),
-
-	search: (text) => get('',{
-		action: 'search',
-		text
-	}),
-
-	saveArticle: (id) => post('',{
-		action: 'npp_save',
-		id
-	}),
-
-	putArticleInQueqe: (id, comment) => post('',{
-		action: 'npp_comment',
-		id,
-		comment
-	}),
-
-	checkCopyvio: (article) => get('https://tools.wmflabs.org/copyvios/api.json',{
-		version: '1',
-		action: 'search',
-		project: 'wikipedia',
-		lang: 'lv',
-		title: article
-	}),
-
-	check: () => get('',{
-		action: 'userinfo'
-	}),
 }
 
 const apiWrapper = {

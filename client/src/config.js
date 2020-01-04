@@ -1,1 +1,1 @@
-export const API_URL = 'https://tools.wmflabs.org/edgarsdev';
+export const API_URL = 'http://127.0.0.1:5000/';
