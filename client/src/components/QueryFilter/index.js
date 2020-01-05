@@ -61,7 +61,7 @@ class QueryFilter extends Component {
 		outputOptions: ['list', 'json', 'table'],
 		onlyArticles: true,
 		filters: [
-			{ type: 'category', specific: { title: 'gfdgf', depth: 0, talk: false } },
+			{ type: 'category', specific: { title: '', depth: 0, talk: false } },
 			//{ type: 'template', specific: { title: '', talk: false } },
 			//{ type: 'petscan', specific: { id: '' } }
 			//{ type: 'pagelinks', specific: { title: '', mode:'linksto' } },//'linksfrom'

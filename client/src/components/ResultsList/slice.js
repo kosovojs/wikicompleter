@@ -2,9 +2,11 @@ import { createSlice } from '@reduxjs/toolkit';
 import api from '../../api/methods';
 import { toast } from 'react-toastify';
 
+const initState = { error: false, loading: false, hasRequested: false, list: [], completionTime: null, reqID: null, isCached: false, cacheAge: null };
+
 const slice = createSlice({
 	name: 'data',
-	initialState: { error: false, loading: false, hasRequested: false, list: [], completionTime: null, reqID: null, isCached: false, cacheAge: null },
+	initialState: initState,
 	reducers: {
 		setData: {
 			reducer(state, action) {
@@ -23,18 +25,25 @@ const slice = createSlice({
 				return { payload: {value: newValue} };
 			}
 		},
+		setInit: {
+			reducer(state) {
+				return { ...initState, loading: state.loading };
+			},
+		}
 	}
 });
 
 const {
 	setData,
-	setLoading
+	setLoading,
+	setInit
 } = slice.actions;
 
 const getData = (ignoreCache=false) => (dispatch, getState) => {
 	const { from, to, filters } = getState().main;
 
 	dispatch(setLoading(true));
+	dispatch(setInit());
 
 	const dataToSend = {
 		from,
@@ -48,6 +57,7 @@ const getData = (ignoreCache=false) => (dispatch, getState) => {
 		const {data, success, meta} = res;
 		if (success === true) {
 			dispatch(setData({
+				hasRequested: true,
 				list: data,
 				completionTime: meta.time,
 				reqID: meta.id,
@@ -56,9 +66,16 @@ const getData = (ignoreCache=false) => (dispatch, getState) => {
 			}));
 		} else {
 			dispatch(setData({
+				hasRequested: true,
 				error: true
 			}));
 		}
+	})
+	.catch(err => {
+		dispatch(setData({
+			hasRequested: true,
+			error: true
+		}));
 	})
 	.finally(() => {
 		dispatch(setLoading(false));

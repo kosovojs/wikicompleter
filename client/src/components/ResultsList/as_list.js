@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 
 import { makeStyles } from '@material-ui/core/styles';
 
-const useStyles  = makeStyles(theme => ({
+const useStyles = makeStyles(theme => ({
 	col3: {
 		columnCount: 1,
 
@@ -23,15 +23,30 @@ const useStyles  = makeStyles(theme => ({
 	}
 }));
 
-const ArticleList = ({list, language}) => {
+const ArticleList = ({ list, language }) => {
 	const classes = useStyles();
 
-	return <div className={classes.col3}><ul>{list.map(item => {
-		const [article, iws] = item;
+	return (
+		<div className={classes.col3}>
+			<ul>
+				{list.map(item => {
+					const [article, iws] = item;
 
-		return <li key={article}><a className={classes.removedUnderline} href={`https://${language}.wikipedia.org/wiki/${article}`} target='_blank'>{article.replace(/_/g,' ')}</a>: {iws}</li>
-
-	})}</ul></div>
-}
+					return (
+						<li key={article}>
+							<a
+								className={classes.removedUnderline}
+								href={`https://${language}.wikipedia.org/wiki/${article}`}
+								target='_blank'>
+								{article.replace(/_/g, ' ')}
+							</a>
+							: {iws}
+						</li>
+					);
+				})}
+			</ul>
+		</div>
+	);
+};
 
 export default ArticleList;

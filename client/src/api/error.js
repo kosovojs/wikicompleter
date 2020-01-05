@@ -16,7 +16,7 @@ function ApiError(message, data, status) {
   this.message = message;
   this.status = status;
 
-  toast.error(`Serveris atgrieza kļūdu: ${this.toString()}`, {autoClose:10000});
+  toast.error(`Server returned error: ${this.toString()}`, {autoClose:10000});
 
   this.toString = function() {
     return `${this.message}\nResponse:\n${

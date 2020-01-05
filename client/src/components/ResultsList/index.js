@@ -57,7 +57,7 @@ class ResultsList extends Component {
 
 	render() {
 		const { anchorEl } = this.state;
-		const { classes, loading, articles, time, isCached, cacheAge, language, reqID } = this.props;
+		const { classes, loading, articles, time, isCached, cacheAge, language, reqID, hasRequested } = this.props;
 
 		const open = Boolean(anchorEl);
 
@@ -69,10 +69,17 @@ class ResultsList extends Component {
 			);
 		}
 
+		if (!hasRequested) {
+			return '';
+		}
+
 		return (
 			<div className={classes.root}>
 				<Typography component={'div'} variant='body1'>
-					{articles.length > 0 && (
+							{reqID && <span className={classes.floatRight}>
+								Request {reqID}: <Link to="/request">with autoload</Link>, <Link to="/users">without autoload</Link>
+							</span>}
+					{articles.length > 0 ? (
 						<>
 							{isCached && (
 								<>
@@ -81,9 +88,6 @@ class ResultsList extends Component {
 								</span>
 								</>
 							)}
-							<span className={classes.floatRight}>
-								Request {reqID}: <Link to="/request">with autoload</Link>, <Link to="/users">without autoload</Link>
-							</span>
 
 							<AsList list={articles} language={language} />
 
@@ -91,7 +95,7 @@ class ResultsList extends Component {
 								Query took {time} seconds to complete
 							</span>
 						</>
-					)}
+					) : 'No data'}
 				</Typography>
 			</div>
 		);
@@ -111,7 +115,8 @@ const mapStateToProps = ({ data, main }) => ({
 	isCached: data.isCached,
 	cacheAge: data.cacheAge,
 	reqID: data.reqID,
-	language: main.from
+	hasRequested: data.hasRequested,
+	language: main.from,
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(withStyles(styles, { withTheme: true })(ResultsList));
