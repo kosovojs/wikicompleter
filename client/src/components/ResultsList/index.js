@@ -76,15 +76,15 @@ class ResultsList extends Component {
 		return (
 			<div className={classes.root}>
 				<Typography component={'div'} variant='body1'>
-							{reqID && <span className={classes.floatRight}>
+							{/* reqID && <span className={classes.floatRight}>
 								Request {reqID}: <Link to="/request">with autoload</Link>, <Link to="/users">without autoload</Link>
-							</span>}
+							</span> */}
 					{articles.length > 0 ? (
 						<>
 							{isCached && (
 								<>
 								<span className={classes.infoText}>
-									Showing {cacheAge} seconds old cached version of list. <span className={classes.loadWithoutCache} onClick={this.reloadWithoutCache}>Load live data!</span>
+									Showing {cacheAge} seconds old cached version of list. {/* <span className={classes.loadWithoutCache} onClick={this.reloadWithoutCache}>Load live data!</span> */}
 								</span>
 								</>
 							)}
