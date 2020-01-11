@@ -29,8 +29,8 @@ class WikiDB:
 	
 	def connect(self):
 		try:
-			#self.conn = pymysql.connect( database=self.langFrom+'wiki_p', host=self.langFrom+'wiki.web.db.svc.eqiad.wmflabs', read_default_file=os.path.expanduser("~/replica.my.cnf"), charset='utf8mb4' , cursorclass=pymysql.cursors.DictCursor)
-			self.conn = pymysql.connect(host='127.0.0.1', user='root_type', password='parole', port=3307, db='wiki_general', charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			self.conn = pymysql.connect( database=self.langFrom+'wiki_p', host=self.langFrom+'wiki.web.db.svc.eqiad.wmflabs', read_default_file=os.path.expanduser("~/replica.my.cnf"), charset='utf8mb4' , cursorclass=pymysql.cursors.DictCursor)
+			#self.conn = pymysql.connect(host='127.0.0.1', user='root_type', password='parole', port=3307, db='wiki_general', charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 		except pymysql.Error as e:
 			print('e:', e)
 			exit()
@@ -69,7 +69,7 @@ class WikiDB:
 	
 	def handleCategory(self, category, depth):
 		formattedCategory = self.formatCategory(category)
-		subcategories = self.getSubcategories([formattedCategory], [formattedCategory], depth)
+		subcategories = self.getSubcategories([formattedCategory], [formattedCategory], int(depth))
 		
 		sqlSubquery = 'select l.ll_from from categorylinks cla where cla.cl_type="page" and l.ll_from=cla.cl_from and cla.cl_to in ({})'
 		sqlSubqueriesParams = subcategories
@@ -127,17 +127,20 @@ class WikiDB:
 		if not response.status_code == 200:
 			return {}
 		
-		data = response.json()['*'][0]['a']['*']
+		try:
+			data = response.json()['*'][0]['a']['*']
 
-		pageIds = [f['id'] for f in data]
+			pageIds = [f['id'] for f in data]
 
-		chunks = self.chunker(pageIds, self.oneChunkSize)
-		
-		idMappingToTitles = {}
-		
-		for chunk in chunks:
-			currRes = self.getLanglinksForPageIds(chunk)
-			idMappingToTitles.update(currRes)
+			chunks = self.chunker(pageIds, self.oneChunkSize)
+			
+			idMappingToTitles = {}
+			
+			for chunk in chunks:
+				currRes = self.getLanglinksForPageIds(chunk)
+				idMappingToTitles.update(currRes)
+		except:
+			return {}
 		
 		return idMappingToTitles
 		
@@ -146,31 +149,28 @@ class WikiDB:
 		tpl = """select ll_from, langs from ({}) tablea order by langs desc limit 500"""
 
 		allInfo = []
-		allInfo.extend([self.makeOneLanglinksSubquery(categoryInfo['query'], categoryInfo['params']) for categoryInfo in params['category']])
-		allInfo.extend([self.makeOneLanglinksSubquery(templateInfo['query'], templateInfo['params']) for templateInfo in params['template']])
-		#allInfo.extend([self.makeOneLanglinksSubquery(templateInfo['query'], templateInfo['params']) for templateInfo in params['petscan']])
-		
+		if 'category' in params:
+			allInfo.extend([self.makeOneLanglinksSubquery(categoryInfo['query'], categoryInfo['params']) for categoryInfo in params['category']])
+		if 'template' in params:
+			allInfo.extend([self.makeOneLanglinksSubquery(templateInfo['query'], templateInfo['params']) for templateInfo in params['template']])
+			
 		allSubqueriesData = allInfo
-		
-		allSubqueries = [f['query'] for f in allSubqueriesData]
-		allParams = [f['params'] for f in allSubqueriesData]
-		
-		finalQuery = tpl.format(" union ".join(allSubqueries))
-		finalParams = [item for sublist in allParams for item in sublist]
-		
-		#print('query',finalQuery)
-		#print('params',finalParams)
-		#exit()
 		
 		res = {}
 
 		if len(allSubqueriesData)>0:
+			
+			allSubqueries = [f['query'] for f in allSubqueriesData]
+			allParams = [f['params'] for f in allSubqueriesData]
+			
+			finalQuery = tpl.format(" union ".join(allSubqueries))
+			finalParams = [item for sublist in allParams for item in sublist]
 			result = self.runQuery(finalQuery, tuple(finalParams))
 			res = {f['ll_from']:f['langs'] for f in result}
 		
 		if 'petscan' in params:
 			for petscanInfo in params['petscan']:
-				petscanResult = self.handlePetscan(petscanInfo['id'])
+				petscanResult = self.handlePetscan(petscanInfo)
 				res.update(petscanResult)
 		
 		return res
@@ -225,7 +225,7 @@ class WikiDB:
 	def main(self, inputData):# = { 'title': '1957 births', 'depth': 5, 'tplTitle': 'Infobox park' }
 		#return [['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48]]
 
-		subQueryParams = {'category':[], 'template':[]}
+		subQueryParams = {'category':[], 'template':[], 'petscan': []}
 		for reqParam in inputData:
 			reqType = reqParam['type']
 			reqSpecifics = reqParam['specific']
@@ -234,7 +234,7 @@ class WikiDB:
 			elif reqType == 'template':
 				subQueryParams['template'].append(self.handleTemplate(reqSpecifics['title']))
 			elif reqType == 'petscan':
-				subQueryParams['template'].append(self.handlePetscan(reqSpecifics['id']))
+				subQueryParams['petscan'].append(reqSpecifics['id'])
 		
 		#categoryInfo = self.handleCategory(inputData['title'], inputData['depth'])
 		#templateInfo = self.handleTemplate(inputData['tplTitle'])

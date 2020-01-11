@@ -1,0 +1,8 @@
+tool:
+    is-prod: true
+redis:
+    host: tools-redis.svc.eqiad.wmflabs
+    db: 0
+    redis-prefix: "WN5jQ4kvYCONVfY07+Bawg4bLxUeFkhK2JrA7fHFa5M="
+    expire-time: 600
+wiki-db:

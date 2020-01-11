@@ -13,6 +13,7 @@ class CacheHandler:
 		self.connect()
 
 	def connect(self):
+		#self.redisConn = redis.Redis(host='tools-redis.svc.eqiad.wmflabs', port=6379, db=0, decode_responses=True)
 		self.redisConn = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 	
 	def get(self, key):
