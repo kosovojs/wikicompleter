@@ -77,7 +77,7 @@ class RequestHandler:
 
 		if haveToIgnoreCache:
 			db_inst = wiki_db.WikiDB(inputParams['from'],inputParams['to'])
-			resultFromDB = db_inst.main(inputParams)
+			resultFromDB = db_inst.main(inputParams['filters'])
 			isCached = False
 			debugLine = True
 			self.cache.setData(reqHash, resultFromDB)
