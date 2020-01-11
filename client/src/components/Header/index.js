@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import { fade, makeStyles } from '@material-ui/core/styles';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
@@ -7,14 +7,17 @@ import MenuItem from '@material-ui/core/MenuItem';
 import { Link, NavLink, withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
+import GitHubIcon from '@material-ui/icons/GitHub';
+import BugReportIcon from '@material-ui/icons/BugReport';
 
-import { API_URL } from '../../config';
-
-import ArticleSearch from '../ArticleSearch';
+import Settings from '../Settings';
 
 const useStyles = makeStyles(theme => ({
 	grow: {
 		flexGrow: 1
+	},
+	removedShadow: {
+		boxShadow: '0px 1px 1px 0px rgba(0,0,0,0.2),0px 1px 1px 0px rgba(0,0,0,0.14),0px 1px 1px 0px rgba(0,0,0,0.12)'
 	},
 	menuButton: {
 		marginRight: theme.spacing(2)
@@ -74,62 +77,43 @@ const useStyles = makeStyles(theme => ({
 	}
 }));
 
-function Header({ isAuth, user, articles, location }) {
+function Header() {
 	const classes = useStyles();
+	const [open, setOpen] = useState(false);
 
-	return (
+	useEffect(() => {
+		setOpen(open);
+	}, [open]);
+
+	const handleModalToggle = (newValue) => {
+		setOpen(newValue);
+	}
+
+	return (<>
 		<div className={classes.grow}>
-			<AppBar position='static'>
+			<AppBar position='sticky' className={classes.removedShadow}>
 				<Toolbar>
 					<NavLink to='/' style={{ textDecoration: 'none', color: 'unset' }}>
 						<Typography className={classes.title} variant='h6' noWrap>
-							NPP
+							WikiCompleter
 						</Typography>
 					</NavLink>
-					<MenuItem component={Link} to='/list'>
-						Saraksts
-					</MenuItem>
-					<MenuItem component={Link} to='/comments'>
-						Ar komentāriem
-					</MenuItem>
-					<MenuItem component={Link} to='/dashboard'>
-						Dashboard
-					</MenuItem>
-					{/* <MenuItem onClick={() => window.open('//tools.wmflabs.org/npp-lv', '_blank')}>
-						Pašreizējā versija
-					</MenuItem> */}
-					{location.pathname === '/' && articles && <MenuItem>Vēl {articles} raksti!</MenuItem>}
 					<div className={classes.grow} />
-					{location.pathname === '/' && <ArticleSearch />}
-					{isAuth ? (
-						<>
-							<MenuItem>Sveiks, {user}!</MenuItem>
-							<MenuItem onClick={() => window.open(`${API_URL}?action=logout`)}>
-								Iziet
-							</MenuItem>
-						</>
-					) : (
-						<MenuItem onClick={() => window.open(`${API_URL}?action=authorize`)}>
-							Ienākt
-						</MenuItem>
-					)}
+					<MenuItem onClick={() => setOpen(true)}>
+						Settings
+					</MenuItem>
+					<MenuItem onClick={() => window.open(`https://github.com/kosovojs/missing-tool`)}>
+						<GitHubIcon />
+					</MenuItem>
+					<MenuItem onClick={() => window.open(`https://github.com/kosovojs/missing-tool/issues`)}>
+						<BugReportIcon />
+					</MenuItem>
 				</Toolbar>
 			</AppBar>
 		</div>
+			{open && <Settings isOpen={open} modalOpenHandle={handleModalToggle} />}
+			</>
 	);
 }
 
-Header.propTypes = {
-	isAuth: PropTypes.bool,
-	location: PropTypes.object,
-	user: PropTypes.string,
-	articles: PropTypes.oneOfType([PropTypes.number, PropTypes.bool])
-};
-
-const mapStateToProps = ({ app }) => ({
-	isAuth: app.isAuth,
-	user: app.user,
-	articles: app.articles
-});
-
-export default withRouter(connect(mapStateToProps)(Header));
+export default Header;

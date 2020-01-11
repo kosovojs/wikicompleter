@@ -17,6 +17,8 @@ import Button from '@material-ui/core/Button';
 
 import { toast } from 'react-toastify';
 
+import {withRouter} from 'react-router-dom';
+
 import PropTypes from 'prop-types';
 import apiWrapper from '../../api/methods';
 
@@ -24,6 +26,8 @@ import apiWrapper from '../../api/methods';
 import { connect } from 'react-redux';
 import { setRequestData } from '../ToolPage/slice';
 import { getData } from '../ResultsList/slice';
+
+import SettingsHandler from '../Settings/handler';
 
 
 const styles = theme => ({
@@ -51,8 +55,13 @@ const filterProperties = {
 	petscan: { id: '' }
 }
 
+
+const filterPlaceholder = { type: 'category', specific: { title: '', depth: 0, talk: false } };
+
 class QueryFilter extends Component {
+	settingsHandler = null;
 	state = {
+		filterChanged: false,
 		inputLanguage: '',
 		project: 'wikipedia',
 		targetLanguage: '',
@@ -61,7 +70,7 @@ class QueryFilter extends Component {
 		outputOptions: ['list', 'json', 'table'],
 		onlyArticles: true,
 		filters: [
-			{ type: 'category', specific: { title: '', depth: 0, talk: false } },
+			filterPlaceholder,
 			//{ type: 'template', specific: { title: '', talk: false } },
 			//{ type: 'petscan', specific: { id: '' } }
 			//{ type: 'pagelinks', specific: { title: '', mode:'linksto' } },//'linksfrom'
@@ -86,7 +95,7 @@ class QueryFilter extends Component {
 				specific: filterProperties[inputValue],
 				[name]: inputValue
 			};
-			this.setState({ filters: newFilter });
+			this.setState({ filters: newFilter, filterChanged: true });
 			return;
 		}
 
@@ -108,11 +117,11 @@ class QueryFilter extends Component {
 		};
 		newFilter[filterIndex] = currentFilter;
 
-		this.setState({ filters: newFilter });
+		this.setState({ filters: newFilter, filterChanged: true });
 	};
 
 	removeFilter = ind => {
-		this.setState({ filters: this.state.filters.filter((item, counter) => counter !== ind) });
+		this.setState({ filters: this.state.filters.filter((item, counter) => counter !== ind), filterChanged: true });
 	};
 
 	addFilter = ind => {
@@ -120,18 +129,15 @@ class QueryFilter extends Component {
 		this.setState({ filters: [
 			...this.state.filters,
 			{ type: 'category', specific: filterProperties.category }
-		] });
+		], filterChanged: true });
 	}
 
-	submit = e => {
-		/*
-		{ 'from':'en','to':'lv', 'ignoreCache': False, 'filters': [
-	{ 'type': 'category', 'specific': { 'title': '1957 births', 'depth': 5, 'talk': False } },
-	{ 'type': 'template', 'specific': { 'title': 'Infobox park', 'talk': False } },
-	{ 'type': 'petscan', 'specific': { 'id': '' } }
-] }
-*/
-		const {inputLanguage, targetLanguage, titleLanguage, filters} = this.state;
+	submit = () => {
+		const {inputLanguage, targetLanguage, titleLanguage, filters, filterChanged} = this.state;
+		if (filterChanged) {
+			this.props.history.push('/');
+			this.setState({filterChanged: false})
+		}
 
 		if (inputLanguage == '') {
 			toast.warn(`Please add input language`, { autoClose: 7500 });
@@ -187,6 +193,60 @@ class QueryFilter extends Component {
 		this.props.getData();
 	}
 
+	handleURLParams = () => {
+		const {id, auto} = this.props.match.params;
+		if (id) {
+			apiWrapper.tool.reqData(id)
+				.then(res => {
+					if ('error' in res) {
+						toast.error(`No such request ID`, {autoClose: 10000});
+						this.setState({
+							filters: [filterPlaceholder],
+							inputLanguage: '',
+							targetLanguage: ''
+						})
+						return;
+					}
+
+					const {filters, from, to} = res;
+					this.setState({
+						filters,
+						inputLanguage: from,
+						targetLanguage: to
+					}, () => {
+						if (auto === 'auto') {
+							this.submit();
+						}
+					})
+				})
+		} else {
+			const {from, to, filter} = this.settingsHandler.getSettings();
+
+			const newFilters = filter === '' ? [filterPlaceholder] : [{
+				specific: filterProperties[filter],
+				type: filter
+			}];
+
+			this.setState({
+				targetLanguage: to,
+				inputLanguage: from,
+				filters: newFilters
+			})
+
+		}
+	}
+
+	componentDidMount() {
+		this.settingsHandler = new SettingsHandler();
+		this.handleURLParams();
+	}
+
+	componentDidUpdate(prevProps) {
+		if (this.props.match.params.id !== prevProps.match.params.id || this.props.match.params.auto !== prevProps.match.params.auto) {
+			this.handleURLParams();
+		}
+	}
+
 	render() {
 		const { inputLanguage, targetLanguage, onlyArticles, filters } = this.state;
 		const { classes, dataLoading } = this.props;
@@ -235,7 +295,7 @@ class QueryFilter extends Component {
 					const { type, specific } = item;
 					return (
 						<div key={ind}>
-							<Divider />
+							<Divider light />
 							<IconButton aria-label='delete' className={classes.margin} onClick={() => this.addFilter(ind)}>
 								<AddIcon fontSize='small' />
 							</IconButton>
@@ -371,6 +431,7 @@ class QueryFilter extends Component {
 					);
 				})}
 				<Button disabled={dataLoading} variant="contained" color="primary" disableelevation="true" onClick={this.submit}>Submit</Button>
+				<div style={{marginBottom:'15px'}} />
 			</div>
 		);
 	}
@@ -385,4 +446,4 @@ const mapStateToProps = state => ({
 	dataLoading: state.data.loading
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(withStyles(styles, { withTheme: true })(QueryFilter));
+export default connect(mapStateToProps, mapDispatchToProps)(withStyles(styles, { withTheme: true })(withRouter(QueryFilter)));

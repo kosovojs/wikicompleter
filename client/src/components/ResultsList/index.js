@@ -9,11 +9,17 @@ import { connect } from 'react-redux';
 
 import { getData } from './slice';
 
-import AsList from './as_list';
+import clsx from 'clsx';
+import { toast } from 'react-toastify';
 
-import {
-	Link
-  } from "react-router-dom";
+import Divider from '@material-ui/core/Divider';
+
+import Button from '@material-ui/core/Button';
+import ButtonGroup from '@material-ui/core/ButtonGroup';
+
+import { Wikilist, ArticleList } from './as_list';
+
+import { Link } from 'react-router-dom';
 
 const styles = theme => ({
 	root: {
@@ -38,26 +44,80 @@ const styles = theme => ({
 		fontSize: '0.8rem'
 	},
 	loadWithoutCache: {
-		cursor:'pointer'
+		cursor: 'pointer'
 	},
 	floatRight: {
 		float: 'right'
+	},
+	flexContainer: {
+		display: 'flex',
+		flexDirection: 'column',
+		alignItems: 'end'
+	},
+	clipboardButton: {
+		marginTop: '7px'
+	},
+	formatButtons: {
+		marginTop: '7px'
 	}
 });
+
+const formatForClipboard = (lang, data) => {
+	const items = [];
+
+	data.forEach(item => {
+		const [article, iws] = item;
+		const formattedTitle = article.replace(/_/g, ' ');
+
+		items.push(`* [[:${lang}:${formattedTitle}|${formattedTitle}]]: ${iws}`);
+	});
+
+	return items.join('\n');
+};
 
 //https://lv.wikipedia.org/api/rest_v1/page/summary/J%C5%ABd%C5%BE%C4%ABna
 class ResultsList extends Component {
 	state = {
-		anchorEl: null
+		anchorEl: null,
+		resultFormat: 'list'
 	};
 
 	reloadWithoutCache = () => {
 		this.props.getData(true);
-	}
+	};
+
+	setFormat = newValue => {
+		this.setState({ resultFormat: newValue });
+	};
+
+	copyDataToClipboard = () => {
+		const { language, articles } = this.props;
+
+		const text = formatForClipboard(language, articles);
+
+		navigator.clipboard.writeText(text).then(
+			function() {
+				toast.success('Copied to clipboard!');
+			},
+			function(err) {
+				toast.success('Could not copy to clipboard!');
+			}
+		);
+	};
 
 	render() {
-		const { anchorEl } = this.state;
-		const { classes, loading, articles, time, isCached, cacheAge, language, reqID, hasRequested } = this.props;
+		const { anchorEl, resultFormat } = this.state;
+		const {
+			classes,
+			loading,
+			articles,
+			time,
+			isCached,
+			cacheAge,
+			language,
+			reqID,
+			hasRequested
+		} = this.props;
 
 		const open = Boolean(anchorEl);
 
@@ -75,27 +135,62 @@ class ResultsList extends Component {
 
 		return (
 			<div className={classes.root}>
+				<Divider />
+				<div style={{ marginTop: '10px' }} />
 				<Typography component={'div'} variant='body1'>
-							{/* reqID && <span className={classes.floatRight}>
-								Request {reqID}: <Link to="/request">with autoload</Link>, <Link to="/users">without autoload</Link>
-							</span> */}
+					{reqID && (
+						<div className={clsx(classes.floatRight, classes.flexContainer)}>
+							<div className={classes.reqLinks}>
+								Request {reqID}: <Link to={`/${reqID}/auto`}>with autoload</Link>,{' '}
+								<Link to={`/${reqID}`}>without autoload</Link>
+							</div>
+							{/* <div className={classes.formatButtons}>
+								<ButtonGroup color='primary'>
+									<Button variant={resultFormat === 'list' ? "contained": ""} onClick={() => this.setFormat('list')}>List</Button>
+									<Button variant={resultFormat === 'wikilist' ? "contained": ""} onClick={() => this.setFormat('wikilist')}>Wikilist</Button>
+								</ButtonGroup>
+							</div> */}
+							<div className={classes.clipboardButton}>
+								<Button
+									variant='outlined'
+									color='primary'
+									onClick={this.copyDataToClipboard}>
+									Copy list to clipboard
+								</Button>
+							</div>
+						</div>
+					)}
 					{articles.length > 0 ? (
 						<>
 							{isCached && (
 								<>
-								<span className={classes.infoText}>
-									Showing {cacheAge} seconds old cached version of list. {/* <span className={classes.loadWithoutCache} onClick={this.reloadWithoutCache}>Load live data!</span> */}
-								</span>
+									<span className={classes.infoText}>
+										Showing {cacheAge} seconds old cached version of list.{' '}
+										{
+											<span
+												className={classes.loadWithoutCache}
+												onClick={this.reloadWithoutCache}>
+												Load live data!
+											</span>
+										}
+									</span>
 								</>
 							)}
 
-							<AsList list={articles} language={language} />
+							{resultFormat === 'list' && (
+								<ArticleList list={articles} language={language} />
+							)}
+							{resultFormat === 'wikilist' && (
+								<Wikilist list={articles} language={language} />
+							)}
 
 							<span className={classes.infoText}>
 								Query took {time} seconds to complete
 							</span>
 						</>
-					) : 'No data'}
+					) : (
+						'No data'
+					)}
 				</Typography>
 			</div>
 		);
@@ -116,7 +211,10 @@ const mapStateToProps = ({ data, main }) => ({
 	cacheAge: data.cacheAge,
 	reqID: data.reqID,
 	hasRequested: data.hasRequested,
-	language: main.from,
+	language: main.from
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(withStyles(styles, { withTheme: true })(ResultsList));
+export default connect(
+	mapStateToProps,
+	mapDispatchToProps
+)(withStyles(styles, { withTheme: true })(ResultsList));

@@ -24,6 +24,18 @@ def getData():
 	
 	return jsonify(result)
 
+@app.route('/req_data/<id>', methods = ['GET'])
+def getReqData(id):
+	import tool_db
+
+	inst = tool_db.ToolDB()
+	result = inst.getRequestData(id)
+
+	if result:
+		return jsonify(result)
+	
+	return jsonify({'error':True})
+
 @app.after_request
 def after_request(response):
 	response.headers.add('Access-Control-Allow-Origin', '*')

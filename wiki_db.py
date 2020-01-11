@@ -1,5 +1,6 @@
 import pymysql
 import os
+from config import IS_DEV
 
 class WikiDB:
 	conn = None
@@ -29,8 +30,11 @@ class WikiDB:
 	
 	def connect(self):
 		try:
-			self.conn = pymysql.connect( database=self.langFrom+'wiki_p', host=self.langFrom+'wiki.web.db.svc.eqiad.wmflabs', read_default_file=os.path.expanduser("~/replica.my.cnf"), charset='utf8mb4' , cursorclass=pymysql.cursors.DictCursor)
-			#self.conn = pymysql.connect(host='127.0.0.1', user='root_type', password='parole', port=3307, db='wiki_general', charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			if IS_DEV:
+				self.conn = pymysql.connect(host='127.0.0.1', user='root_type', password='parole', port=3307, db='wiki_general', charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+			else:
+				self.conn = pymysql.connect( database=self.langFrom+'wiki_p', host=self.langFrom+'wiki.web.db.svc.eqiad.wmflabs', read_default_file=os.path.expanduser("~/replica.my.cnf"), charset='utf8mb4' , cursorclass=pymysql.cursors.DictCursor)
+			
 		except pymysql.Error as e:
 			print('e:', e)
 			exit()
@@ -223,7 +227,7 @@ class WikiDB:
 		return idMappingToTitles
 		
 	def main(self, inputData):# = { 'title': '1957 births', 'depth': 5, 'tplTitle': 'Infobox park' }
-		#return [['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48]]
+		return [['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48]]
 
 		subQueryParams = {'category':[], 'template':[], 'petscan': []}
 		for reqParam in inputData:

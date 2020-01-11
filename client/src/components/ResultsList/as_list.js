@@ -49,4 +49,31 @@ const ArticleList = ({ list, language }) => {
 	);
 };
 
-export default ArticleList;
+const Wikilist = ({ list, language }) => {
+	const classes = useStyles();
+
+	return (
+		<div className={classes.col3}>
+				{list.map(item => {
+					const [article, iws] = item;
+					const formattedTitle = article.replace(/_/g, ' ');
+
+					return (
+						<div key={article}>
+							{'* '}{'[['}<a
+								className={classes.removedUnderline}
+								href={`https://${language}.wikipedia.org/wiki/${article}`}
+								target='_blank'>
+								{formattedTitle}
+							</a>{']]'}
+							: {iws}
+						</div>
+					);
+				})}
+		</div>
+	);
+};
+
+export {
+	ArticleList, Wikilist
+};

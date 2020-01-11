@@ -1,8 +1,6 @@
 import redis
-import yaml
 import json
-
-#config = yaml.safe_load(open('config.yaml'))
+from config import REDIS_HOST
 
 class CacheHandler:
 	redisConn = None
@@ -13,8 +11,7 @@ class CacheHandler:
 		self.connect()
 
 	def connect(self):
-		#self.redisConn = redis.Redis(host='tools-redis.svc.eqiad.wmflabs', port=6379, db=0, decode_responses=True)
-		self.redisConn = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+		self.redisConn = redis.Redis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
 	
 	def get(self, key):
 		data = self.redisConn.get(self.prefix+key)
@@ -30,6 +27,8 @@ class CacheHandler:
 
 		return data
 
-	def setData(self, key, data):
+	def setData(self, key, data, expireTime = None):
+		if expireTime == None:
+			expireTime = self.expireTime
 		self.redisConn.set(self.prefix+key, json.dumps(data))
-		self.redisConn.expire(self.prefix+key, self.expireTime)
+		self.redisConn.expire(self.prefix+key, expireTime)

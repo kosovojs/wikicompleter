@@ -1,4 +1,5 @@
+tool:
+    is-dev: true
 redis:
-    host: tools-mc
-    db: 7
-    redis_prefix: "WN5jQ4kvYCONVfY07+Bawg4bLxUeFkhK2JrA7fHFa5M="
+    host-dev: localhost
+    host-toollabs: tools-redis.svc.eqiad.wmflabs

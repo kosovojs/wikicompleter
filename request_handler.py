@@ -1,36 +1,63 @@
 import pymysql
-import os
 import json
 import hashlib
-import yaml
+from re import IGNORECASE, sub
 
 import cache_handler
+import wiki_api
 import tool_db
 import wiki_db
 from time import time, sleep
-
-config = yaml.safe_load(open('config.yaml'))
-
-print(config)
 
 #vēl vajadzētu rate limiter
 
 class RequestHandler:
 	cache = None
+	def cleanFilterParams(self, lang, data):
+		apiInst = wiki_api.WikiAPI()
+		
+		nsData = apiInst.getWikipediaNamespaces(lang)
+
+		returnArr = []
+
+		for filterItem in data:
+			filterType = filterItem['type']
+			if filterType == 'petscan':
+				returnArr.append(filterItem)
+				continue
+
+			currTitle = filterItem['specific']['title'].strip()
+			
+			namespaces = nsData[filterType]
+			if len(namespaces)>0:
+				searchString = r"^("+'|'.join(namespaces)+")\:(.*)"
+				currTitle = sub(searchString,r'\2',currTitle, IGNORECASE)
+			
+			currTitle = currTitle[:1].upper() + currTitle[1:]
+			filterItem['specific'].update({'title':currTitle})
+			returnArr.append(filterItem)
+		
+		return returnArr
 
 	def generateHashForInputData(self, data):
 		#https://stackoverflow.com/questions/5884066/hashing-a-dictionary
-		dataForHash = data
+		dataForHash = data.copy()
 
 		if 'ignoreCache' in dataForHash:
 			del dataForHash['ignoreCache']
 
-		requestInputString = json.dumps(data, sort_keys=True)
+		requestInputString = json.dumps(dataForHash, sort_keys=True)
 		reqHash = hashlib.md5(requestInputString.encode())
 		return reqHash.hexdigest()
 	
 	def main(self, inputParams):
 		startTime = time()
+
+		fromLang = inputParams['from']
+
+		normalizedFilter = self.cleanFilterParams(fromLang, inputParams['filters'])
+		inputParams['filters'] = normalizedFilter
+
 		reqHash = self.generateHashForInputData(inputParams)
 		
 		toolDB = tool_db.ToolDB()
@@ -77,7 +104,7 @@ class RequestHandler:
 		endTime = time()
 		reqTime = endTime - startTime
 		
-		sleep(0.3)
+		#sleep(2)
 
 		return {
 			'data': requestData,
@@ -95,10 +122,14 @@ class RequestHandler:
 #
 if __name__ == '__main__':
 	inst = RequestHandler()
-	res = inst.main({ 'from':'en','to':'lv', 'ignoreCache': False, 'filters': [
-	{ 'type': 'category', 'specific': { 'title': '1957 births', 'depth': 5, 'talk': False } },
-	{ 'type': 'template', 'specific': { 'talk': False, 'title': 'Infobox park' } },
-	{ 'type': 'petscan', 'specific': { 'id': '' } }
-	] })
-
+	filters = [
+		{ 'type': 'category', 'specific': { 'title': '1957 births', 'depth': 5, 'talk': False } },
+		{ 'type': 'category', 'specific': { 'title': 'Category:1957 births', 'depth': 5, 'talk': False } },
+		{ 'type': 'template', 'specific': { 'talk': False, 'title': 'infobox park' } },
+		{ 'type': 'petscan', 'specific': { 'id': '' } }
+	]
+	
+	#cleanFilters = inst.cleanFilterParams('en',filters)
+	#print(cleanFilters)
+	res = inst.main({ 'from':'en','to':'lv', 'ignoreCache': True, 'filters': filters })
 	print(res)
