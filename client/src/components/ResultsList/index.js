@@ -109,7 +109,9 @@ class ResultsList extends Component {
 		const { anchorEl, resultFormat } = this.state;
 		const {
 			classes,
+			errorMessage,
 			loading,
+			error,
 			articles,
 			time,
 			isCached,
@@ -133,6 +135,10 @@ class ResultsList extends Component {
 			return '';
 		}
 
+		if (error && errorMessage) {
+			return <Typography component={'div'} variant='body1'>{`Error occurred: ${errorMessage}`}</Typography>
+		}
+
 		return (
 			<div className={classes.root}>
 				<Divider />
@@ -150,6 +156,7 @@ class ResultsList extends Component {
 									<Button variant={resultFormat === 'wikilist' ? "contained": ""} onClick={() => this.setFormat('wikilist')}>Wikilist</Button>
 								</ButtonGroup>
 							</div> */}
+							{articles.length > 0 &&
 							<div className={classes.clipboardButton}>
 								<Button
 									variant='outlined'
@@ -157,7 +164,7 @@ class ResultsList extends Component {
 									onClick={this.copyDataToClipboard}>
 									Copy list to clipboard
 								</Button>
-							</div>
+							</div>}
 						</div>
 					)}
 					{articles.length > 0 ? (
@@ -205,6 +212,8 @@ const mapDispatchToProps = { getData };
 
 const mapStateToProps = ({ data, main }) => ({
 	loading: data.loading,
+	errorMessage: data.errorMessage,
+	error: data.error,
 	articles: data.list,
 	time: data.completionTime,
 	isCached: data.isCached,

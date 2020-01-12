@@ -13,10 +13,16 @@ from time import time, sleep
 
 class RequestHandler:
 	cache = None
+	apiInst = None
+
+	def setAPIInst(self):
+		if self.apiInst is None:
+			self.apiInst = wiki_api.WikiAPI()
+
 	def cleanFilterParams(self, lang, data):
-		apiInst = wiki_api.WikiAPI()
+		self.setAPIInst()
 		
-		nsData = apiInst.getWikipediaNamespaces(lang)
+		nsData = self.apiInst.getWikipediaNamespaces(lang)
 
 		returnArr = []
 
@@ -39,6 +45,17 @@ class RequestHandler:
 		
 		return returnArr
 
+	def checkIfValidLanguages(self, fromLang, toLang):
+		self.setAPIInst()
+
+		allWikiLanguages = self.apiInst.getWikipediaLanguages()
+
+		if fromLang not in allWikiLanguages or toLang not in allWikiLanguages:
+			return False
+		
+		return True
+
+
 	def generateHashForInputData(self, data):
 		#https://stackoverflow.com/questions/5884066/hashing-a-dictionary
 		dataForHash = data.copy()
@@ -54,6 +71,17 @@ class RequestHandler:
 		startTime = time()
 
 		fromLang = inputParams['from']
+		toLang = inputParams['to']
+
+		isLanguagesValid = self.checkIfValidLanguages(fromLang, toLang)
+
+		if not isLanguagesValid:
+			return {
+			'success': False,
+			'meta': {
+				'message': 'Languages not recognised'
+			}
+		}
 
 		normalizedFilter = self.cleanFilterParams(fromLang, inputParams['filters'])
 		inputParams['filters'] = normalizedFilter

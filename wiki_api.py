@@ -18,7 +18,6 @@ class WikiAPI:
 
 		return liveData
 
-
 	def fetchWikipediaNamespaces(self, language):
 		allNamespaces = {'category':[],'template':[]}
 		site = wikipedia(language)
@@ -46,9 +45,51 @@ class WikiAPI:
 					allNamespaces['category'].append(tplNSData['alias'])
 
 		return allNamespaces
+
+	def getWikipediaLanguages(self):
+		cache = cache_handler.CacheHandler()
+		cacheResult = cache.get('wiki-languages')
+
+		if cacheResult:
+			return cacheResult
+		
+		liveData = self.fetchWikipediaLanguages()
+
+		cache.setData('wiki-languages', liveData, 7200)#2 hours
+
+		return liveData
+
+	def fetchWikipediaLanguages(self):
+		allLanguages = []
+		site = wikipedia('en')
+
+		apiRes = site('sitematrix', smtype='language', smstate='all', smlangprop='code|name|site|dir|localname', smsiteprop='dbname|code|sitename|url|lang', smlimit='max')['sitematrix']
+
+		#print(apiRes)
+
+		for ind in apiRes:
+			if ind == 'count':
+				continue
+			#{'code': 'zu', 'name': 'isiZulu', 'site': [{'url': 'https://zu.wikipedia.org', 'dbname': 'zuwiki', 'code': 'wiki', 'lang': 'zu', 'sitename': 'Wikipedia'}, {'url': 'https://zu.wiktionary.org', 'dbname': 'zuwiktionary', 'code': 'wiktionary', 'lang': 'zu', 'sitename': 'Wiktionary'}, {'url': 'https://zu.wikibooks.org', 'dbname': 'zuwikibooks', 'code': 'wikibooks', 'lang': 'zu', 'sitename': 'Wikibooks', 'closed': True}], 'dir': 'ltr', 'localname': 'zulu'}
+			data = apiRes[ind]
+			#print(ind)
+			languageCode = data['code']
+			foundWiki = False
+			
+			for site in data['site']:
+				if 'closed' in site and site['closed'] == True:
+					continue
+				
+				if site['code'] == 'wiki':
+					allLanguages.append(languageCode)
+					break
+		
+		return allLanguages
+		#return allNamespaces
+
 #
 
 if __name__ == '__main__':
 	inst = WikiAPI()
-	res = inst.getWikipediaNamespaces('lv')
+	res = inst.getWikipediaLanguages()
 	print(res)
