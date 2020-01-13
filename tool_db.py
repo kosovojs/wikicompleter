@@ -19,7 +19,7 @@ class ToolDB:
 			if IS_DEV:
 				self.conn = pymysql.connect(host='127.0.0.1', user='root_type', password='parole', port=3307, db='missing', charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			else:
-				self.conn = pymysql.connect(db='s53957__dev_p', read_default_file=os.path.expanduser("~/replica.my.cnf"), host='tools.db.svc.eqiad.wmflabs', port=3306, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+				self.conn = pymysql.connect(db='s54270__completer_p', read_default_file=os.path.expanduser("~/replica.my.cnf"), host='tools.db.svc.eqiad.wmflabs', port=3306, charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 
 		except pymysql.Error as e:
 			print('e:', e)

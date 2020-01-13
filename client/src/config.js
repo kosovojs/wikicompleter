@@ -1,1 +1,1 @@
-export const API_URL = '//tools.wmflabs.org/edgarsdev/';
+export const API_URL = '//tools.wmflabs.org/completer/';
