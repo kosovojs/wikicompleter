@@ -1,5 +1,0 @@
-tool:
-    is-dev: true
-redis:
-    host-dev: localhost
-    host-toollabs: tools-redis.svc.eqiad.wmflabs
