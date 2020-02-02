@@ -17,18 +17,16 @@ import Button from '@material-ui/core/Button';
 
 import { toast } from 'react-toastify';
 
-import {withRouter} from 'react-router-dom';
+import { withRouter } from 'react-router-dom';
 
 import PropTypes from 'prop-types';
 import apiWrapper from '../../api/methods';
-
 
 import { connect } from 'react-redux';
 import { setRequestData } from '../ToolPage/slice';
 import { getData } from '../ResultsList/slice';
 
 import SettingsHandler from '../Settings/handler';
-
 
 const styles = theme => ({
 	root: {
@@ -51,10 +49,9 @@ const styles = theme => ({
 
 const filterProperties = {
 	category: { title: '', depth: 0, talk: false },
-	template: {title: '', talk: false},
+	template: { title: '', talk: false },
 	petscan: { id: '' }
-}
-
+};
 
 const filterPlaceholder = { type: 'category', specific: { title: '', depth: 0, talk: false } };
 
@@ -70,7 +67,7 @@ class QueryFilter extends Component {
 		outputOptions: ['list', 'json', 'table'],
 		onlyArticles: true,
 		filters: [
-			filterPlaceholder,
+			filterPlaceholder
 			//{ type: 'template', specific: { title: '', talk: false } },
 			//{ type: 'petscan', specific: { id: '' } }
 			//{ type: 'pagelinks', specific: { title: '', mode:'linksto' } },//'linksfrom'
@@ -121,22 +118,28 @@ class QueryFilter extends Component {
 	};
 
 	removeFilter = ind => {
-		this.setState({ filters: this.state.filters.filter((item, counter) => counter !== ind), filterChanged: true });
+		this.setState({
+			filters: this.state.filters.filter((item, counter) => counter !== ind),
+			filterChanged: true
+		});
 	};
 
 	addFilter = ind => {
 		//teorētiski jau varētu ielikt kā nākamo pēc 'ind'
-		this.setState({ filters: [
-			...this.state.filters,
-			{ type: 'category', specific: filterProperties.category }
-		], filterChanged: true });
-	}
+		this.setState({
+			filters: [
+				...this.state.filters,
+				{ type: 'category', specific: filterProperties.category }
+			],
+			filterChanged: true
+		});
+	};
 
 	submit = () => {
-		const {inputLanguage, targetLanguage, titleLanguage, filters, filterChanged} = this.state;
+		const { inputLanguage, targetLanguage, titleLanguage, filters, filterChanged } = this.state;
 		if (filterChanged) {
 			this.props.history.push('/');
-			this.setState({filterChanged: false})
+			this.setState({ filterChanged: false });
 		}
 
 		if (inputLanguage == '') {
@@ -164,130 +167,147 @@ class QueryFilter extends Component {
 			if (wasFilterError) {
 				return;
 			}
-			const {type, specific} = item;
+			const { type, specific } = item;
 			if (type === 'category') {
 				if (specific.title === '') {
-					toast.warn(`Please fill filter nr. ${(ind+1)}`, { autoClose: 7500 });
+					toast.warn(`Please fill filter nr. ${ind + 1}`, { autoClose: 7500 });
 					wasFilterError = true;
 					return;
 				}
 			} else if (type === 'template') {
 				if (specific.title === '') {
-					toast.warn(`Please fill filter nr. ${(ind+1)}`, { autoClose: 7500 });
+					toast.warn(`Please fill filter nr. ${ind + 1}`, { autoClose: 7500 });
 					wasFilterError = true;
 					return;
 				}
 			} else if (type === 'petscan') {
 				if (specific.id === '') {
-					toast.warn(`Please fill filter nr. ${(ind+1)}`, { autoClose: 7500 });
+					toast.warn(`Please fill filter nr. ${ind + 1}`, { autoClose: 7500 });
 					wasFilterError = true;
 					return;
 				}
 			}
-		})
+		});
 		if (wasFilterError) {
 			return;
 		}
 
 		this.props.setRequestData(inputLanguage, targetLanguage, filters);
 		this.props.getData();
-	}
+	};
 
 	handleURLParams = () => {
-		console.log(this.props.match.params)
-		const {id, auto, data, type} = this.props.match.params;
+		console.log(this.props.match.params);
+		const { id, auto, data, type } = this.props.match.params;
 		if (id) {
-			apiWrapper.tool.reqData(id)
-				.then(res => {
-					if ('error' in res) {
-						toast.error(`No such request ID`, {autoClose: 10000});
-						this.setState({
-							filters: [filterPlaceholder],
-							inputLanguage: '',
-							targetLanguage: ''
-						})
-						return;
-					}
-
-					const {filters, from, to} = res;
+			apiWrapper.tool.reqData(id).then(res => {
+				if ('error' in res) {
+					toast.error(`No such request ID`, { autoClose: 10000 });
 					this.setState({
+						filters: [filterPlaceholder],
+						inputLanguage: '',
+						targetLanguage: ''
+					});
+					return;
+				}
+
+				const { filters, from, to } = res;
+				this.setState(
+					{
 						filters,
 						inputLanguage: from,
 						targetLanguage: to
-					}, () => {
+					},
+					() => {
 						if (auto === 'auto') {
 							this.submit();
 						}
-					})
-				})
+					}
+				);
+			});
 		} else if (data) {
 			//console.log(data)
 			const parsedData = JSON.parse(data);
 			//console.log(parsedData)
-			const {from, to, filters} = parsedData;
+			const { from, to, filters } = parsedData;
 
 			let formattedFilters = [];
 
 			filters.forEach(entry => {
-				const {type, specific: {title, depth, id}} = entry;
+				const {
+					type,
+					specific: { title, depth, id }
+				} = entry;
 				if (!type) {
 					return;
 				}
 				if (type === 'template') {
-					formattedFilters.push({type, specific: {...filterProperties.template, title}})
+					formattedFilters.push({
+						type,
+						specific: { ...filterProperties.template, title }
+					});
 				}
 				if (type === 'petscan') {
-					formattedFilters.push({type, specific: {...filterProperties.petscan, id}})
+					formattedFilters.push({ type, specific: { ...filterProperties.petscan, id } });
 				}
 				if (type === 'category') {
-					formattedFilters.push({type, specific: {...filterProperties.category, title, depth}})
+					formattedFilters.push({
+						type,
+						specific: { ...filterProperties.category, title, depth }
+					});
 				}
-			})
+			});
 			if (formattedFilters.length < 1) {
-				formattedFilters.push(filterPlaceholder)
+				formattedFilters.push(filterPlaceholder);
 			}
 
 			this.setState({
 				targetLanguage: to,
 				inputLanguage: from,
 				filters: formattedFilters
-			})
+			});
 		} else if (type) {
-			const {from, to, depth, name} = this.props.match.params;
+			const { from, to, depth, name } = this.props.match.params;
 			let finalFilter = {};
 
 			if (type === 'template') {
-				finalFilter = {type, specific: {...filterProperties.template, title: name}};
+				finalFilter = { type, specific: { ...filterProperties.template, title: name } };
 			}
 			if (type === 'petscan') {
-				finalFilter = {type, specific: {...filterProperties.petscan, id: name}};
+				finalFilter = { type, specific: { ...filterProperties.petscan, id: name } };
 			}
 			if (type === 'category') {
-				finalFilter = {type, specific: {...filterProperties.category, title: name, depth}};
+				finalFilter = {
+					type,
+					specific: { ...filterProperties.category, title: name, depth }
+				};
 			}
 
 			this.setState({
 				targetLanguage: to,
 				inputLanguage: from,
 				filters: [finalFilter]
-			})
-
+			});
 		} else {
-			const {from, to, filter} = this.settingsHandler.getSettings();
+			const { from, to, filter } = this.settingsHandler.getSettings();
 
-			const newFilters = filter === '' ? [filterPlaceholder] : [{
-				specific: filterProperties[filter],
-				type: filter
-			}];
+			const newFilters =
+				filter === ''
+					? [filterPlaceholder]
+					: [
+							{
+								specific: filterProperties[filter],
+								type: filter
+							}
+					  ];
 
 			this.setState({
 				targetLanguage: to,
 				inputLanguage: from,
 				filters: newFilters
-			})
-
+			});
 		}
-	}
+	};
 
 	componentDidMount() {
 		this.settingsHandler = new SettingsHandler();
@@ -295,7 +315,12 @@ class QueryFilter extends Component {
 	}
 
 	componentDidUpdate(prevProps) {
-		if (this.props.match.params.id !== prevProps.match.params.id || this.props.match.params.auto !== prevProps.match.params.auto || this.props.match.params.data !== prevProps.match.params.data || this.props.match.params.type !== prevProps.match.params.type) {
+		if (
+			this.props.match.params.id !== prevProps.match.params.id ||
+			this.props.match.params.auto !== prevProps.match.params.auto ||
+			this.props.match.params.data !== prevProps.match.params.data ||
+			this.props.match.params.type !== prevProps.match.params.type
+		) {
 			this.handleURLParams();
 		}
 	}
@@ -349,7 +374,10 @@ class QueryFilter extends Component {
 					return (
 						<div key={ind}>
 							<Divider light />
-							<IconButton aria-label='delete' className={classes.margin} onClick={() => this.addFilter(ind)}>
+							<IconButton
+								aria-label='delete'
+								className={classes.margin}
+								onClick={() => this.addFilter(ind)}>
 								<AddIcon fontSize='small' />
 							</IconButton>
 							{filters.length > 1 && (
@@ -360,20 +388,19 @@ class QueryFilter extends Component {
 									<DeleteIcon fontSize='small' />
 								</IconButton>
 							)}
-							<FormControl variant='outlined' className={classes.formControl}>
-								<InputLabel htmlFor='outlined-age-simple'>Filter type</InputLabel>
-								<Select
-									margin='dense'
-									value={type}
-									name='type'
-									onChange={this.handleFilterChange(ind)}
-									input={<OutlinedInput name='age' id='outlined-age-simple' />}>
-									<MenuItem value={'category'}>Category</MenuItem>
-									<MenuItem value={'petscan'}>Petscan</MenuItem>
-									<MenuItem value={'template'}>Template</MenuItem>
-									{/* <MenuItem value={'pagelinks'}>Pagelinks</MenuItem> */}
-								</Select>
-							</FormControl>
+							<TextField
+								select
+								label='Filter type'
+								variant='outlined'
+								margin='dense'
+								name='type'
+								onChange={this.handleFilterChange(ind)}
+								value={type}>
+								<MenuItem value={'category'}>Category</MenuItem>
+								<MenuItem value={'petscan'}>Petscan</MenuItem>
+								<MenuItem value={'template'}>Template</MenuItem>
+							</TextField>
+
 							{type === 'category' && (
 								<>
 									<TextField
@@ -483,8 +510,15 @@ class QueryFilter extends Component {
 						</div>
 					);
 				})}
-				<Button disabled={dataLoading} variant="contained" color="primary" disableelevation="true" onClick={this.submit}>Submit</Button>
-				<div style={{marginBottom:'15px'}} />
+				<Button
+					disabled={dataLoading}
+					variant='contained'
+					color='primary'
+					disableelevation='true'
+					onClick={this.submit}>
+					Submit
+				</Button>
+				<div style={{ marginBottom: '15px' }} />
 			</div>
 		);
 	}
@@ -499,4 +533,7 @@ const mapStateToProps = state => ({
 	dataLoading: state.data.loading
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(withStyles(styles, { withTheme: true })(withRouter(QueryFilter)));
+export default connect(
+	mapStateToProps,
+	mapDispatchToProps
+)(withStyles(styles, { withTheme: true })(withRouter(QueryFilter)));
