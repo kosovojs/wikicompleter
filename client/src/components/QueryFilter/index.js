@@ -194,7 +194,8 @@ class QueryFilter extends Component {
 	}
 
 	handleURLParams = () => {
-		const {id, auto} = this.props.match.params;
+		console.log(this.props.match.params)
+		const {id, auto, data, type} = this.props.match.params;
 		if (id) {
 			apiWrapper.tool.reqData(id)
 				.then(res => {
@@ -219,6 +220,58 @@ class QueryFilter extends Component {
 						}
 					})
 				})
+		} else if (data) {
+			//console.log(data)
+			const parsedData = JSON.parse(data);
+			//console.log(parsedData)
+			const {from, to, filters} = parsedData;
+
+			let formattedFilters = [];
+
+			filters.forEach(entry => {
+				const {type, specific: {title, depth, id}} = entry;
+				if (!type) {
+					return;
+				}
+				if (type === 'template') {
+					formattedFilters.push({type, specific: {...filterProperties.template, title}})
+				}
+				if (type === 'petscan') {
+					formattedFilters.push({type, specific: {...filterProperties.petscan, id}})
+				}
+				if (type === 'category') {
+					formattedFilters.push({type, specific: {...filterProperties.category, title, depth}})
+				}
+			})
+			if (formattedFilters.length < 1) {
+				formattedFilters.push(filterPlaceholder)
+			}
+
+			this.setState({
+				targetLanguage: to,
+				inputLanguage: from,
+				filters: formattedFilters
+			})
+		} else if (type) {
+			const {from, to, depth, name} = this.props.match.params;
+			let finalFilter = {};
+
+			if (type === 'template') {
+				finalFilter = {type, specific: {...filterProperties.template, title: name}};
+			}
+			if (type === 'petscan') {
+				finalFilter = {type, specific: {...filterProperties.petscan, id: name}};
+			}
+			if (type === 'category') {
+				finalFilter = {type, specific: {...filterProperties.category, title: name, depth}};
+			}
+
+			this.setState({
+				targetLanguage: to,
+				inputLanguage: from,
+				filters: [finalFilter]
+			})
+
 		} else {
 			const {from, to, filter} = this.settingsHandler.getSettings();
 
@@ -242,7 +295,7 @@ class QueryFilter extends Component {
 	}
 
 	componentDidUpdate(prevProps) {
-		if (this.props.match.params.id !== prevProps.match.params.id || this.props.match.params.auto !== prevProps.match.params.auto) {
+		if (this.props.match.params.id !== prevProps.match.params.id || this.props.match.params.auto !== prevProps.match.params.auto || this.props.match.params.data !== prevProps.match.params.data || this.props.match.params.type !== prevProps.match.params.type) {
 			this.handleURLParams();
 		}
 	}

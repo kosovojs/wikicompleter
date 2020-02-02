@@ -32,6 +32,8 @@ const App = () => {
 					<CssBaseline />
 					<Header />
 					<Switch>
+						<Route exact path='/set/:data' component={MainPage} />
+						<Route exact path='/simple/:from/:to/:type/:name/:depth?' component={MainPage} />
 						<Route exact path='/:id?/:auto?' component={MainPage} />
 						<Route component={NotFound} />
 					</Switch>
