@@ -105,7 +105,9 @@ class RequestHandler:
 
 		if haveToIgnoreCache:
 			db_inst = wiki_db.WikiDB(inputParams['from'],inputParams['to'])
-			resultFromDB = db_inst.main(inputParams['filters'])
+			dbRes = db_inst.main(inputParams['filters'])
+			resultFromDB = dbRes['data']
+			notifyAboutIncompleteresults = dbRes['wasMaxStatementTime']
 			isCached = False
 			debugLine = True
 			self.cache.setData(reqHash, resultFromDB)
@@ -114,12 +116,15 @@ class RequestHandler:
 
 		elif cacheResult:
 			requestData = cacheResult
+			notifyAboutIncompleteresults = False
 			isCached = True
 			cacheAge = self.cache.ttl(reqHash)
 
 		else:
 			db_inst = wiki_db.WikiDB(inputParams['from'],inputParams['to'])
-			resultFromDB = db_inst.main(inputParams['filters'])
+			dbRes = db_inst.main(inputParams['filters'])
+			resultFromDB = dbRes['data']
+			notifyAboutIncompleteresults = dbRes['wasMaxStatementTime']
 			isCached = False
 			debugLine = True
 			self.cache.setData(reqHash, resultFromDB)
@@ -132,8 +137,6 @@ class RequestHandler:
 		endTime = time()
 		reqTime = endTime - startTime
 		
-		#sleep(2)
-
 		return {
 			'data': requestData,
 			'success': True,
@@ -141,6 +144,7 @@ class RequestHandler:
 				'debugLine': debugLine,
 				'time': "{0:.2f}".format(reqTime),
 				'id': reqID,
+				'reachedMaxStatementTime': notifyAboutIncompleteresults,
 				'cached': isCached,
 				'cache_age': None if not isCached else (self.cache.expireTime - cacheAge)
 			}

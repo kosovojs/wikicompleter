@@ -118,7 +118,8 @@ class ResultsList extends Component {
 			cacheAge,
 			language,
 			reqID,
-			hasRequested
+			hasRequested,
+			reachedMaxStatementTime
 		} = this.props;
 
 		const open = Boolean(anchorEl);
@@ -184,6 +185,7 @@ class ResultsList extends Component {
 								</>
 							)}
 
+
 							{resultFormat === 'list' && (
 								<ArticleList list={articles} language={language} />
 							)}
@@ -195,9 +197,13 @@ class ResultsList extends Component {
 								Query took {time} seconds to complete
 							</span>
 						</>
-					) : (
-						'No data'
-					)}
+					) : <>
+
+					{reachedMaxStatementTime && <div className={classes.infoText}>
+										One or more queries took too long to execute, so these may be incomplete results
+					</div>}
+					No data
+					</>}
 				</Typography>
 			</div>
 		);
@@ -220,7 +226,8 @@ const mapStateToProps = ({ data, main }) => ({
 	cacheAge: data.cacheAge,
 	reqID: data.reqID,
 	hasRequested: data.hasRequested,
-	language: main.from
+	language: main.from,
+	reachedMaxStatementTime: data.reachedMaxStatementTime
 });
 
 export default connect(

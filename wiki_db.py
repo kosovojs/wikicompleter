@@ -1,9 +1,12 @@
 import pymysql
 import os
 from config import IS_DEV
+import yaml
+from time import sleep
 
 class WikiDB:
 	conn = None
+	reachedMaxStatementTime = False
 	langFrom = 'en'
 	langTo = 'lv'
 	oneChunkSize = 50
@@ -31,19 +34,39 @@ class WikiDB:
 	def connect(self):
 		try:
 			if IS_DEV:
-				self.conn = pymysql.connect(host='127.0.0.1', user='root_type', password='parole', port=3307, db='wiki_general', charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+				config = yaml.safe_load(open('db_local.yaml'))
+				self.conn = pymysql.connect(host=config['host'], user=config['user'], password=config['password'], port=config['port'], database=self.langFrom+'wiki_p', charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			else:
 				self.conn = pymysql.connect( database=self.langFrom+'wiki_p', host=self.langFrom+'wiki.web.db.svc.eqiad.wmflabs', read_default_file=os.path.expanduser("~/replica.my.cnf"), charset='utf8mb4' , cursorclass=pymysql.cursors.DictCursor)
 			
+			with self.conn.cursor() as cursor:
+				cursor.execute('SET SESSION MAX_STATEMENT_TIME=300;')#5 minutes = 300
+
 		except pymysql.Error as e:
 			print('e:', e)
 			exit()
 	
 	def runQuery(self, sql: str, params: tuple = (), maxTries: int = 2) -> dict:
-		with self.conn.cursor() as cursor:
-			cursor.execute(sql, params)
-			result = cursor.fetchall()
-			return result
+		if maxTries == 0:
+			return []
+
+		try:
+			with self.conn.cursor() as cursor:
+				cursor.execute(sql, params)
+				result = cursor.fetchall()
+				return result
+		except pymysql.Error as e:
+			errorCode = str(e)
+			if 'Query execution was interrupted' in errorCode:#Query execution was interrupted (max_statement_time exceeded)
+				self.reachedMaxStatementTime = True
+				return []
+			
+			if 'max_user_connections' in errorCode:#User %s already has more than 'max_user_connections' active connections
+				import random
+				sleep(random.uniform(10, 60))
+				return self.runQuery(sql, params, maxTries-1)
+
+			return []
 		
 	def getSubcategories(self, rootcategories: list, currentCategoryList: list, depth: int):
 		if depth == 0:
@@ -262,7 +285,7 @@ class WikiDB:
 
 		#print(finalResult)
 
-		return finalResult
+		return {'data':finalResult,'wasMaxStatementTime':self.reachedMaxStatementTime}
 		#return self.fromCategory
 #
 #inst = WikiDB('en','lv')

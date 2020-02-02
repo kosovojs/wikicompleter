@@ -2,7 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import api from '../../api/methods';
 import { toast } from 'react-toastify';
 
-const initState = { error: false, errorMessage: null, loading: false, hasRequested: false, list: [], completionTime: null, reqID: null, isCached: false, cacheAge: null };
+const initState = { error: false, errorMessage: null, loading: false, hasRequested: false, list: [], reachedMaxStatementTime: false, completionTime: null, reqID: null, isCached: false, cacheAge: null };
 
 const slice = createSlice({
 	name: 'data',
@@ -60,6 +60,7 @@ const getData = (ignoreCache=false) => (dispatch, getState) => {
 				hasRequested: true,
 				list: data,
 				completionTime: meta.time,
+				reachedMaxStatementTime: meta.reachedMaxStatementTime,
 				reqID: meta.id,
 				isCached: meta.cached,
 				error: false,
