@@ -11,7 +11,7 @@ class WikiAPI:
 
 		if cacheResult:
 			return cacheResult
-		
+
 		liveData = self.fetchWikipediaNamespaces(language)
 
 		cache.setData('{}-siteinfo'.format(language), liveData, 7200)#2 hours
@@ -34,15 +34,15 @@ class WikiAPI:
 				tplNSData['name'],
 				tplNSData['canonical']
 			])
-			
+
 			namespaceAliasses = r.namespacealiases if 'namespacealiases' in r else []
 			#print(namespaceAliasses)
 			for alias in namespaceAliasses:
 				nsID = str(alias['id'])
 				if nsID == tplNS:
-					allNamespaces['template'].append(tplNSData['alias'])
+					allNamespaces['template'].append(tplNSData.get('alias'))
 				if nsID == catNS:
-					allNamespaces['category'].append(tplNSData['alias'])
+					allNamespaces['category'].append(tplNSData.get('alias'))
 
 		return allNamespaces
 
@@ -52,7 +52,7 @@ class WikiAPI:
 
 		if cacheResult:
 			return cacheResult
-		
+
 		liveData = self.fetchWikipediaLanguages()
 
 		cache.setData('wiki-languages', liveData, 7200)#2 hours
@@ -75,15 +75,15 @@ class WikiAPI:
 			#print(ind)
 			languageCode = data['code']
 			foundWiki = False
-			
+
 			for site in data['site']:
 				if 'closed' in site and site['closed'] == True:
 					continue
-				
+
 				if site['code'] == 'wiki':
 					allLanguages.append(languageCode)
 					break
-		
+
 		return allLanguages
 		#return allNamespaces
 

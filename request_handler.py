@@ -21,7 +21,7 @@ class RequestHandler:
 
 	def cleanFilterParams(self, lang, data):
 		self.setAPIInst()
-		
+
 		nsData = self.apiInst.getWikipediaNamespaces(lang)
 
 		returnArr = []
@@ -33,16 +33,16 @@ class RequestHandler:
 				continue
 
 			currTitle = filterItem['specific']['title'].strip()
-			
+
 			namespaces = nsData[filterType]
-			if len(namespaces)>0:
+			if len(namespaces)>0 and all(f for f in namespaces):
 				searchString = r"^("+'|'.join(namespaces)+")\:(.*)"
 				currTitle = sub(searchString,r'\2',currTitle, IGNORECASE)
-			
+
 			currTitle = currTitle[:1].upper() + currTitle[1:]
 			filterItem['specific'].update({'title':currTitle})
 			returnArr.append(filterItem)
-		
+
 		return returnArr
 
 	def checkIfValidLanguages(self, fromLang, toLang):
@@ -52,7 +52,7 @@ class RequestHandler:
 
 		if fromLang not in allWikiLanguages or toLang not in allWikiLanguages:
 			return False
-		
+
 		return True
 
 
@@ -66,7 +66,7 @@ class RequestHandler:
 		requestInputString = json.dumps(dataForHash, sort_keys=True)
 		reqHash = hashlib.md5(requestInputString.encode())
 		return reqHash.hexdigest()
-	
+
 	def main(self, inputParams):
 		startTime = time()
 
@@ -87,7 +87,7 @@ class RequestHandler:
 		inputParams['filters'] = normalizedFilter
 
 		reqHash = self.generateHashForInputData(inputParams)
-		
+
 		toolDB = tool_db.ToolDB()
 
 		reqID = toolDB.getRequestID(reqHash)
@@ -97,7 +97,7 @@ class RequestHandler:
 		self.cache = cache_handler.CacheHandler()
 
 		cacheResult = self.cache.get(reqHash)
-		
+
 		requestData = None
 		isCached = False
 		debugLine = False
@@ -111,7 +111,7 @@ class RequestHandler:
 			isCached = False
 			debugLine = True
 			self.cache.setData(reqHash, resultFromDB)
-			
+
 			requestData = resultFromDB
 
 		elif cacheResult:
@@ -128,15 +128,15 @@ class RequestHandler:
 			isCached = False
 			debugLine = True
 			self.cache.setData(reqHash, resultFromDB)
-			
+
 			requestData = resultFromDB
-		
+
 		if not reqID:
 			reqID = toolDB.saveRequestData(inputParams['from'],inputParams['to'],inputParams, reqHash)
-		
+
 		endTime = time()
 		reqTime = endTime - startTime
-		
+
 		return {
 			'data': requestData,
 			'success': True,
@@ -149,7 +149,7 @@ class RequestHandler:
 				'cache_age': None if not isCached else (self.cache.expireTime - cacheAge)
 			}
 		}
-		
+
 		#return self.fromCategory
 #
 if __name__ == '__main__':
@@ -160,7 +160,7 @@ if __name__ == '__main__':
 		{ 'type': 'template', 'specific': { 'talk': False, 'title': 'infobox park' } },
 		{ 'type': 'petscan', 'specific': { 'id': '' } }
 	]
-	
+
 	#cleanFilters = inst.cleanFilterParams('en',filters)
 	#print(cleanFilters)
 	res = inst.main({ 'from':'en','to':'lv', 'ignoreCache': True, 'filters': filters })
