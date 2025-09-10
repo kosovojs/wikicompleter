@@ -15,10 +15,10 @@ class WikiDB:
 		self.langFrom = languageFrom
 		self.langTo = languageTo
 		self.connect()
-	
+
 	def formatCategory(self, inputStr):
 		return inputStr.replace(' ','_')
-	
+
 	def encode_if_necessary(self, b):
 		if type(b) is bytes:
 			return b.decode('utf8')
@@ -30,7 +30,7 @@ class WikiDB:
 		except:
 			print('whereIn ex ',arguments)
 			exit()
-	
+
 	def connect(self):
 		try:
 			if IS_DEV:
@@ -38,14 +38,14 @@ class WikiDB:
 				self.conn = pymysql.connect(host=config['host'], user=config['user'], password=config['password'], port=config['port'], database=self.langFrom+'wiki_p', charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 			else:
 				self.conn = pymysql.connect( database=self.langFrom+'wiki_p', host=self.langFrom+'wiki.web.db.svc.eqiad.wmflabs', read_default_file=os.path.expanduser("~/replica.my.cnf"), charset='utf8mb4' , cursorclass=pymysql.cursors.DictCursor)
-			
+
 			with self.conn.cursor() as cursor:
 				cursor.execute('SET SESSION MAX_STATEMENT_TIME=300;')#5 minutes = 300
 
 		except pymysql.Error as e:
 			print('e:', e)
 			exit()
-	
+
 	def runQuery(self, sql: str, params: tuple = (), maxTries: int = 2) -> dict:
 		if maxTries == 0:
 			return []
@@ -60,29 +60,29 @@ class WikiDB:
 			if 'Query execution was interrupted' in errorCode:#Query execution was interrupted (max_statement_time exceeded)
 				self.reachedMaxStatementTime = True
 				return []
-			
+
 			if 'max_user_connections' in errorCode:#User %s already has more than 'max_user_connections' active connections
 				import random
 				sleep(random.uniform(10, 60))
 				return self.runQuery(sql, params, maxTries-1)
 
 			return []
-		
+
 	def getSubcategories(self, rootcategories: list, currentCategoryList: list, depth: int):
 		if depth == 0:
 			return currentCategoryList
-			
+
 		sqlTemplate = "SELECT page_title FROM categorylinks cl join page p on p.page_id=cl.cl_from WHERE cl_to IN ({}) AND cl_type='subcat'"
-		
+
 		categoriesPreparedForSQL = [self.formatCategory(f) for f in rootcategories]
-		
+
 		if len(categoriesPreparedForSQL) == 0:
 			return []
-		
+
 		sqlTemplateFormatted = sqlTemplate.format(self.whereIn(categoriesPreparedForSQL))
 
 		result = self.runQuery(sqlTemplateFormatted, tuple(categoriesPreparedForSQL))
-		
+
 		if len(result) == 0:
 			return currentCategoryList
 
@@ -93,24 +93,26 @@ class WikiDB:
 		depth -= 1
 
 		return self.getSubcategories(currLevel, currentCategoryList, depth)
-	
+
 	def handleCategory(self, category, depth):
 		formattedCategory = self.formatCategory(category)
 		subcategories = self.getSubcategories([formattedCategory], [formattedCategory], int(depth))
-		
+
 		sqlSubquery = 'select l.ll_from from categorylinks cla where cla.cl_type="page" and l.ll_from=cla.cl_from and cla.cl_to in ({})'
 		sqlSubqueriesParams = subcategories
-		
+
 		return {
 			'query':sqlSubquery.format(self.whereIn(subcategories)),
 			'params': sqlSubqueriesParams
 		}
-	
+
 	def handleTemplate(self, title):
 		formattedCategory = self.formatCategory(title)
-		
-		sqlSubquery = 'select l.ll_from from templatelinks tl where l.ll_from=tl.tl_from and tl_namespace=10 and tl.tl_from_namespace=0 and tl.tl_title=%s'
-		
+
+		sqlSubquery = 'select l.ll_from from templatelinks t join linktarget ON tl_target_id = lt_id where l.ll_from=tl_from and lt_namespace = 10 and tl_from_namespace=0 AND lt_title=%s'
+		#'select l.ll_from from templatelinks t join linktarget ON l.ll_from=tl.tl_from and tl_target_id = lt_id where lt_namespace = 10 and tl.tl_from_namespace=0 AND lt_title=%s'
+		#'select l.ll_from from templatelinks tl where l.ll_from=tl.tl_from and tl_namespace=10 and tl.tl_from_namespace=0 and tl.tl_title=%s'
+
 		return {
 			'query':sqlSubquery,
 			'params': [formattedCategory]
@@ -142,7 +144,7 @@ class WikiDB:
 		finalQuery = tpl.format(self.whereIn(pages))
 		finalParams = [self.langTo]
 		finalParams.extend(pages)
-		
+
 		result = self.runQuery(finalQuery, tuple(finalParams))
 
 		return {f['ll_from']:f['langs'] for f in result}
@@ -153,24 +155,24 @@ class WikiDB:
 
 		if not response.status_code == 200:
 			return {}
-		
+
 		try:
 			data = response.json()['*'][0]['a']['*']
 
 			pageIds = [f['id'] for f in data]
 
 			chunks = self.chunker(pageIds, self.oneChunkSize)
-			
+
 			idMappingToTitles = {}
-			
+
 			for chunk in chunks:
 				currRes = self.getLanglinksForPageIds(chunk)
 				idMappingToTitles.update(currRes)
 		except:
 			return {}
-		
+
 		return idMappingToTitles
-		
+
 
 	def mainLanglinksQuery(self, params):
 		tpl = """select ll_from, langs from ({}) tablea order by langs desc limit 500"""
@@ -180,26 +182,26 @@ class WikiDB:
 			allInfo.extend([self.makeOneLanglinksSubquery(categoryInfo['query'], categoryInfo['params']) for categoryInfo in params['category']])
 		if 'template' in params:
 			allInfo.extend([self.makeOneLanglinksSubquery(templateInfo['query'], templateInfo['params']) for templateInfo in params['template']])
-			
+
 		allSubqueriesData = allInfo
-		
+
 		res = {}
 
 		if len(allSubqueriesData)>0:
-			
+
 			allSubqueries = [f['query'] for f in allSubqueriesData]
 			allParams = [f['params'] for f in allSubqueriesData]
-			
+
 			finalQuery = tpl.format(" union ".join(allSubqueries))
 			finalParams = [item for sublist in allParams for item in sublist]
 			result = self.runQuery(finalQuery, tuple(finalParams))
 			res = {f['ll_from']:f['langs'] for f in result}
-		
+
 		if 'petscan' in params:
 			for petscanInfo in params['petscan']:
 				petscanResult = self.handlePetscan(petscanInfo)
 				res.update(petscanResult)
-		
+
 		return res
 
 	''' def mainLanglinksQuery(self, categoryInfo, templateInfo):
@@ -225,7 +227,7 @@ class WikiDB:
 		result = self.runQuery(finalQuery, tuple(finalParams))
 		print('query finished')
 		exit()
-		
+
 		return {f['ll_from']:f['langs'] for f in result} '''
 
 	def chunker(self, seq, size):
@@ -240,15 +242,15 @@ class WikiDB:
 
 	def getPageInfoInBatches(self, pages):
 		chunks = self.chunker(pages, self.oneChunkSize)
-		
+
 		idMappingToTitles = {}
-		
+
 		for chunk in chunks:
 			currRes = self.getPageInfoForPages(chunk)
 			idMappingToTitles.update(currRes)
-		
+
 		return idMappingToTitles
-		
+
 	def main(self, inputData):# = { 'title': '1957 births', 'depth': 5, 'tplTitle': 'Infobox park' }
 		#return [['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48],['Shavkat_Mirziyoyev', 62], ['Jackie_Shroff', 61], ['Bernie_Mac', 56], ['Melanie_Griffith', 56], ['Wolfgang_Ketterle', 56], ['Goodluck_Jonathan', 54], ['Dani_Rodrik', 52], ['Mukesh_Ambani', 48]]
 
@@ -262,14 +264,14 @@ class WikiDB:
 				subQueryParams['template'].append(self.handleTemplate(reqSpecifics['title']))
 			elif reqType == 'petscan':
 				subQueryParams['petscan'].append(reqSpecifics['id'])
-		
+
 		#categoryInfo = self.handleCategory(inputData['title'], inputData['depth'])
 		#templateInfo = self.handleTemplate(inputData['tplTitle'])
 
 		pageIdMappingToLanglinks = self.mainLanglinksQuery(subQueryParams)
 
 		pageIDs = list(pageIdMappingToLanglinks)
-		
+
 		pageIdMappingToTitles = self.getPageInfoInBatches(pageIDs)
 
 		finalResult = []
@@ -278,7 +280,7 @@ class WikiDB:
 			if pageID not in pageIdMappingToTitles:#it may be non-article page ...or a bug
 				#print("not found: ",pageID)
 				continue
-				
+
 			finalResult.append([pageIdMappingToTitles[pageID], pageIdMappingToLanglinks[pageID]])
 		#
 		finalResult.sort(key=lambda x: (-x[1], x[0]))
@@ -293,4 +295,4 @@ class WikiDB:
 			{ 'type': 'category', 'specific': { 'title': '1957 births', 'depth': 0, 'talk': False } },
 			{ 'type': 'template', 'specific': { 'title': 'Infobox park', 'talk': False } },
 			{ 'type': 'petscan', 'specific': { 'id': '' } }
-		]) """#'from':'en','to':'lv', 'ignoreCache': True, 
+		]) """#'from':'en','to':'lv', 'ignoreCache': True,
