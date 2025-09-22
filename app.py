@@ -8,11 +8,17 @@ from flask import request
 app = Flask(__name__, static_folder="./client/dist", template_folder="./client")
 
 CORS(app)
-app.debug = True
+#app.debug = True
 
 @app.route('/', methods=['GET'])
 def index_page():
 	return render_template('index.html')
+
+@app.route('/_/healtz', methods = ['GET'])
+def getHealth():
+	return jsonify({
+		'status': 'ok'
+	})
 
 @app.route('/data', methods = ['POST'])
 def getData():
