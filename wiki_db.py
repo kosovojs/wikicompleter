@@ -72,7 +72,7 @@ class WikiDB:
 		if depth == 0:
 			return currentCategoryList
 
-		sqlTemplate = "SELECT page_title FROM categorylinks cl join page p on p.page_id=cl.cl_from WHERE cl_to IN ({}) AND cl_type='subcat'"
+		sqlTemplate = "SELECT page_title FROM categorylinks cl JOIN page p ON p.page_id=cl.cl_from JOIN linktarget lt ON cl.cl_target_id=lt.lt_id WHERE lt.lt_namespace=14 AND lt.lt_title IN ({}) AND cl.cl_type='subcat'"
 
 		categoriesPreparedForSQL = [self.formatCategory(f) for f in rootcategories]
 
@@ -98,7 +98,7 @@ class WikiDB:
 		formattedCategory = self.formatCategory(category)
 		subcategories = self.getSubcategories([formattedCategory], [formattedCategory], int(depth))
 
-		sqlSubquery = 'select l.ll_from from categorylinks cla where cla.cl_type="page" and l.ll_from=cla.cl_from and cla.cl_to in ({})'
+		sqlSubquery = 'select l.ll_from from categorylinks cla join linktarget lt on cla.cl_target_id=lt.lt_id where cla.cl_type="page" and l.ll_from=cla.cl_from and lt.lt_namespace=14 and lt.lt_title in ({})'
 		sqlSubqueriesParams = subcategories
 
 		return {
