@@ -175,7 +175,7 @@ class WikiDB:
 
 
 	def mainLanglinksQuery(self, params):
-		tpl = """select ll_from, langs from ({}) tablea order by langs desc limit 500"""
+		tpl = """select ll_from, langs from ({}) tablea order by langs desc limit 1000"""
 
 		allInfo = []
 		if 'category' in params:
